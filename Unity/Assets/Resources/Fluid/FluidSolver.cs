@@ -170,13 +170,19 @@ public class FluidSolver : MonoBehaviour {
 	void FluidUpdate() {
 		float dt = Time.deltaTime;
 
-		for (int i=1 ; i<N+1 ; i++ ) { 
-			for (int j=1 ; j<N+1 ; j++ ) {
+		for (int i=0 ; i<N+2 ; i++ ) { 
+			for (int j=0 ; j<N+2 ; j++ ) {
 				dens_prev[i][j] = 0;
-				//u_prev[i][j] = 1.0f;
-				v_prev[i][j] = 1.0f;
-            }
-        }
+			}
+		}
+
+		for (int i=0 ; i<N+2 ; i++ ) { 
+			for (int j=0 ; j<N+2 ; j++ ) {
+				u_prev[i][j] = 0; //1.0f;
+				v_prev[i][j] = 0; //1.0f;
+			}
+		}
+
 
 		if (Input.GetMouseButtonDown (0)) {
 			Ray ray = Camera.main.ScreenPointToRay (Input.mousePosition);
@@ -205,7 +211,7 @@ public class FluidSolver : MonoBehaviour {
 		float visc = 0.0001f;
 		VelocityStep (N, u, v, u_prev, v_prev, visc, dt);
 
-		float diff = .00f; //Diffusion, how well the particles spread out
+		float diff = 0.00001f; //Diffusion, how well the particles spread out
 		DensityStep (N, dens, dens_prev, u, v, diff, dt);
 	}
 	
@@ -382,15 +388,15 @@ public class FluidSolver : MonoBehaviour {
 	
 	void SetBound ( int N, int b, float[][] x ) {
 		for (int i=1 ; i<=N ; i++ ) { 
-			x[0][i] =	b==1 ? -x[1][i] : x[1][i];
-			x[N+1][i] =	b==1 ? -x[N][i] : x[N][i]; 
-			x[i][0] =	b==2 ? -x[i][1] : x[i][1]; 
-			x[i][N+1] =	b==2 ? -x[i][N] : x[i][N];
+			x[0][i]		= 0; //b==1 ? -x[1][i] : x[1][i];
+			x[N+1][i]	= 0; //b==1 ? -x[N][i] : x[N][i];
+			x[i][0]		= 0; //b==2 ? -x[i][1] : x[i][1];
+			x[i][N+1]	= 0; //b==2 ? -x[i][N] : x[i][N];
 		} 
-		x[0][0] = 0.5f*(x[1][0]+x[0][1]); 
-		x[0][N+1] = 0.5f*(x[1][N+1]+x[0][N]); 
-		x[N+1][0] = 0.5f*(x[N][0]+x[N+1][1]); 
-		x[N+1][N+1] = 0.5f*(x[N][N+1]+x[N+1][N]);
+		x[0][0]		= 0; //0.5f*(x[1][0]+x[0][1]); 
+		x[0][N+1]	= 0; //0.5f*(x[1][N+1]+x[0][N]); 
+		x[N+1][0]	= 0; //0.5f*(x[N][0]+x[N+1][1]); 
+		x[N+1][N+1]	= 0; //0.5f*(x[N][N+1]+x[N+1][N]);
 	} 
 
 	int CalculateIndex(int i, int j) {
