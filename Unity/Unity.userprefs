@@ -2,12 +2,12 @@
   <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug" />
   <MonoDevelop.Ide.Workbench ActiveDocument="Assets\Resources\Fluid\FluidSolver.cs">
     <Files>
-      <File FileName="Assets\Resources\Fluid\FluidSolver.cs" Line="61" Column="23" />
+      <File FileName="Assets\Resources\Fluid\FluidSolver.cs" Line="40" Column="3" />
     </Files>
   </MonoDevelop.Ide.Workbench>
   <MonoDevelop.Ide.DebuggingService.Breakpoints>
     <BreakpointStore>
-      <Breakpoint file="C:\Users\Pablo\Pablo's Documents\Projects\Liquid\Unity\Assets\Resources\Fluid\FluidSolver.cs" line="716" />
+      <Breakpoint file="C:\Users\Pablo\Pablo's Documents\Projects\Liquid\Unity\Assets\Resources\Fluid\FluidSolver.cs" line="681" />
     </BreakpointStore>
   </MonoDevelop.Ide.DebuggingService.Breakpoints>
   <MonoDevelop.Ide.DebuggingService.PinnedWatches />

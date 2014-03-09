@@ -13,16 +13,37 @@ public class FluidLayer : MonoBehaviour {
 		_verSpeed = new float[N+2][],
 		_density = new float[N+2][],
 
-		_horSpeedSource = new float[N+2][],
+		/*_horSpeedSource = new float[N+2][],
 		_verSpeedSource = new float[N+2][],
-		_densitySource = new float[N+2][],
+		_densitySource = new float[N+2][],*/
+		
+		_horGradient = new float[N+2][],
+		_verGradient = new float[N+2][];
 
-		_gradient = new float[N+2][];
+    public float[][] Density
+    {
+        get
+        {
+            return _density;
+        }
+    }
+
+	public float[][] HorGradient {
+		get {
+			return _horGradient;
+		}
+	}
+
+	public float[][] VerGradient {
+		get {
+			return _verGradient;
+		}
+	}
 
 	float _totalDens;
 
 	Mesh _mesh;
-	Vector3 _prevMouseWorldPos;
+	//Vector3 _prevMouseWorldPos;
 
 	//Performance test
 	Timer _fluidTimer = new Timer();
@@ -35,15 +56,16 @@ public class FluidLayer : MonoBehaviour {
 			_verSpeed[i] = new float[N+2];
 			_density[i] = new float[N+2];
 
-			_horSpeedSource[i] = new float[N+2];
+			/*_horSpeedSource[i] = new float[N+2];
 			_verSpeedSource[i] = new float[N+2];
-			_densitySource[i] = new float[N+2];
+			_densitySource[i] = new float[N+2];*/
 
-			_gradient[i] = new float[N+2];
+			_horGradient[i] = new float[N+2];
+			_verGradient[i] = new float[N+2];
 		}
 
 		// Initialize visuals
-        renderer.material.mainTexture = new Texture2D (N+2, N+2, TextureFormat.ARGB32, false);
+        //renderer.material.mainTexture = new Texture2D (N+2, N+2, TextureFormat.ARGB32, false);
 		_mesh = new Mesh();
 		GetComponent<MeshFilter> ().mesh = _mesh;
 		//(collider as MeshCollider).sharedMesh = _mesh;
@@ -104,8 +126,8 @@ public class FluidLayer : MonoBehaviour {
 		// set the pixel values
 		for (int i = 0; i < N+2; ++i) {
 			for (int j = 0; j < N+2; ++j) {
-				float r = 0; //_horSpeed[i][j]/2;
-				float g = 0; //_verSpeed[i][j]/2;
+				float r = _horGradient[i][j];
+				float g = _verGradient[i][j];
 				float b = _density[i][j];
 				texture.SetPixel(i, j, new Color(r, g, b));
 			}
@@ -114,7 +136,7 @@ public class FluidLayer : MonoBehaviour {
 		// Apply all SetPixel calls
 		texture.Apply();
 	}
-	void ApplyDepthData() {
+    void ApplyDepthData(float[][]lowerLayersDens) {
 		//var mesh = GetComponent<MeshFilter> ().sharedMesh;
 		var mesh = _mesh;
 		Vector3[] vertices = mesh.vertices;
@@ -123,7 +145,7 @@ public class FluidLayer : MonoBehaviour {
 		for (int i = 0; i < N+2; ++i) {
 			for (int j = 0; j < N+2; ++j) {
 				int index = FluidSolver.CalculateIndex(i,j);
-				vertices[index].y = _density[i][j];
+                vertices[index].y = lowerLayersDens != null ? _density[i][j] + lowerLayersDens[i][j] : _density[i][j];
 			}
 		}
 
@@ -133,54 +155,33 @@ public class FluidLayer : MonoBehaviour {
 	
 	// Update is called once per frame
 	void Update () {
-		FluidUpdate();
-
-		GenerateTexture ();
-		ApplyDepthData ();
+		//DoUpdate ();
 	}
 
-	void FluidUpdate() {
+	public void DoUpdate(float[][] horSpeedSource, float[][] verSpeedSource, float[][]densSource, float[][]lowerLayersDens) {
+		FluidUpdate(horSpeedSource, verSpeedSource, densSource);
+		
+		//GenerateTexture ();
+        ApplyDepthData (lowerLayersDens);
+	}
+
+	void FluidUpdate(float[][] horSpeedSource, float[][] verSpeedSource, float[][]densSource) {
 		float dt = Time.deltaTime;
 
-		_totalDens = 0;
 		for (int i=0 ; i<N+2 ; i++ ) { 
 			for (int j=0 ; j<N+2 ; j++ ) {
-				_densitySource[i][j] = 0;
-				_horSpeedSource[i][j] = 0; //1.0f;
-				_verSpeedSource[i][j] = 0; //1.0f;
 				_totalDens += _density[i][j];
 			}
 		}
 
-
-		if (Input.GetMouseButtonDown (0)) {
-			Ray ray = Camera.main.ScreenPointToRay (Input.mousePosition);
-			RaycastHit hit;
-			if (collider.Raycast(ray, out hit, float.PositiveInfinity)) {
-				_prevMouseWorldPos = hit.point;
-			}
-		}
-		if (Input.GetMouseButton (0)) {
-			Ray ray = Camera.main.ScreenPointToRay (Input.mousePosition);
-			RaycastHit hit;
-			if (collider.Raycast(ray, out hit, float.PositiveInfinity)) {
-				Vector2 hitpos = (Vector2.one - hit.textureCoord) * N;
-				int x = Mathf.RoundToInt(hitpos.x);
-				int y = Mathf.RoundToInt(hitpos.y);
-				if (x > 10 && x < N-10 && y > 10 && y < N-10) {
-					_densitySource[x][y] += 100;
-
-					Vector3 move = (hit.point - _prevMouseWorldPos) * 10000;
-					_horSpeedSource[x][y] += move.x;
-					_verSpeedSource[x][y] += move.z;
-
-					_prevMouseWorldPos = hit.point;
-				}
-			}
-		}
-
 		_fluidTimer.Start();
-		FluidSolver.UpdateFluid(N, _horSpeed, _verSpeed, _density, _horSpeedSource, _verSpeedSource, _densitySource, _fluidity, _diffusion, dt);
+		FluidSolver.UpdateFluid(
+			N,
+			_horSpeed, _verSpeed, _density, _verGradient, _horGradient,
+			horSpeedSource, verSpeedSource, densSource,
+			_fluidity, _diffusion,
+			dt
+			);
 		_fluidTimer.Stop();
 	}
 
@@ -188,4 +189,27 @@ public class FluidLayer : MonoBehaviour {
 		GUI.Label(new Rect(10,10, 500, 30), "Fluid: " + _fluidTimer);
 		GUI.Label(new Rect(10,30, 500, 30), "Total Density: " + _totalDens);
 	}
+
+	void OnDrawGizmosSelected () {
+        // Draw a yellow sphere at the transform's position
+		for (int i=1; i<=N; ++i) { 
+			for (int j=1; j<=N; ++j) {
+				Vector3 dir = new Vector3 (_horGradient[i][j], 0, _verGradient[i][j]);
+				float speed = dir.magnitude;
+				dir /= speed * 10.0f;
+				speed /= 10.0f;
+				Gizmos.color = new Color(speed, 0, 0);
+				Gizmos.DrawRay (
+					transform.position -
+					new Vector3 (5.0f - 1.0f/(float)(N + 2)*5.0f, 0, 5.0f - 1.0f/(float)(N + 2)*5.0f) +
+					new Vector3 ((float)i / (float)(N + 2) * 10.0f, _density[i][j], (float)j / (float)(N + 2) * 10.0f),
+					dir);
+				/*Gizmos.DrawSphere(
+					transform.position -
+					new Vector3 (5.0f - 1.0f/(float)(N + 2)*5.0f, 0, 5.0f - 1.0f/(float)(N + 2)*5.0f) +
+					new Vector3 ((float)i / (float)(N + 2) * 10.0f, _density[i][j], (float)j / (float)(N + 2) * 10.0f),
+					.1f);*/
+			}
+		}
+    }
 }
