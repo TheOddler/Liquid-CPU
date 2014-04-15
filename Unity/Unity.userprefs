@@ -1,14 +1,12 @@
 ﻿<Properties>
-  <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug" />
-  <MonoDevelop.Ide.Workbench ActiveDocument="Assets\Resources\Fluid\FluidSolver.cs">
+  <MonoDevelop.Ide.Workspace />
+  <MonoDevelop.Ide.Workbench ActiveDocument="..\..\Coopcraft\Unity\Assets\Resources\Network\ConnectionManager.cs">
     <Files>
-      <File FileName="Assets\Resources\Fluid\FluidSolver.cs" Line="40" Column="3" />
+      <File FileName="..\..\Coopcraft\Unity\Assets\Resources\Network\ConnectionManager.cs" Line="6" Column="32" />
     </Files>
   </MonoDevelop.Ide.Workbench>
   <MonoDevelop.Ide.DebuggingService.Breakpoints>
-    <BreakpointStore>
-      <Breakpoint file="C:\Users\Pablo\Pablo's Documents\Projects\Liquid\Unity\Assets\Resources\Fluid\FluidSolver.cs" line="681" />
-    </BreakpointStore>
+    <BreakpointStore />
   </MonoDevelop.Ide.DebuggingService.Breakpoints>
   <MonoDevelop.Ide.DebuggingService.PinnedWatches />
 </Properties>

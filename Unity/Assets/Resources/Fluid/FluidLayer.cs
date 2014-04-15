@@ -158,14 +158,14 @@ public class FluidLayer : MonoBehaviour {
 		//DoUpdate ();
 	}
 
-	public void DoUpdate(float[][] horSpeedSource, float[][] verSpeedSource, float[][]densSource, float[][]lowerLayersDens) {
-		FluidUpdate(horSpeedSource, verSpeedSource, densSource);
+	public void DoUpdate(float[][] prevHorGrad, float[][] prevVerGrad, float[][]densSource, float[][]lowerLayersDens) {
+		FluidUpdate(prevHorGrad, prevVerGrad, densSource);
 		
 		//GenerateTexture ();
         ApplyDepthData (lowerLayersDens);
 	}
 
-	void FluidUpdate(float[][] horSpeedSource, float[][] verSpeedSource, float[][]densSource) {
+	void FluidUpdate(float[][] prevHorGrad, float[][] prevVerGrad, float[][]densSource) {
 		float dt = Time.deltaTime;
 
 		for (int i=0 ; i<N+2 ; i++ ) { 
@@ -178,7 +178,7 @@ public class FluidLayer : MonoBehaviour {
 		FluidSolver.UpdateFluid(
 			N,
 			_horSpeed, _verSpeed, _density, _verGradient, _horGradient,
-			horSpeedSource, verSpeedSource, densSource,
+			prevHorGrad, prevVerGrad, null, null, densSource,
 			_fluidity, _diffusion,
 			dt
 			);
@@ -190,25 +190,31 @@ public class FluidLayer : MonoBehaviour {
 		GUI.Label(new Rect(10,30, 500, 30), "Total Density: " + _totalDens);
 	}
 
-	void OnDrawGizmosSelected () {
+	void OnDrawGizmos () {
         // Draw a yellow sphere at the transform's position
+		if (_horGradient == null || _verGradient == null ||
+		    _horGradient[0] == null || _verGradient[0] == null
+		    ) {
+			return;
+		}
 		for (int i=1; i<=N; ++i) { 
 			for (int j=1; j<=N; ++j) {
-				Vector3 dir = new Vector3 (_horGradient[i][j], 0, _verGradient[i][j]);
-				float speed = dir.magnitude;
-				dir /= speed * 10.0f;
-				speed /= 10.0f;
-				Gizmos.color = new Color(speed, 0, 0);
+				float hor = _horGradient[i][j];
+				float ver = _verGradient[i][j];
+				float height = 2.0f;//_density[i][j] + 0.3f;
+				Vector3 dir = new Vector3 (hor, 0, ver);
+				//dir.y = -dir.magnitude;
+				//dir.Normalize();
+				//dir /= 10.0f;
+				Gizmos.color = new Color(
+					hor < 0 ? 255:0,
+					hor > 0 ? 255:0,
+					0);
 				Gizmos.DrawRay (
 					transform.position -
 					new Vector3 (5.0f - 1.0f/(float)(N + 2)*5.0f, 0, 5.0f - 1.0f/(float)(N + 2)*5.0f) +
-					new Vector3 ((float)i / (float)(N + 2) * 10.0f, _density[i][j], (float)j / (float)(N + 2) * 10.0f),
+					new Vector3 ((float)i / (float)(N + 2) * 10.0f, height, (float)j / (float)(N + 2) * 10.0f),
 					dir);
-				/*Gizmos.DrawSphere(
-					transform.position -
-					new Vector3 (5.0f - 1.0f/(float)(N + 2)*5.0f, 0, 5.0f - 1.0f/(float)(N + 2)*5.0f) +
-					new Vector3 ((float)i / (float)(N + 2) * 10.0f, _density[i][j], (float)j / (float)(N + 2) * 10.0f),
-					.1f);*/
 			}
 		}
     }

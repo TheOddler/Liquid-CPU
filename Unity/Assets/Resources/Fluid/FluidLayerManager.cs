@@ -37,19 +37,15 @@ public class FluidLayerManager : MonoBehaviour {
 		for (int i=0 ; i<N+2 ; i++ ) { 
 			for (int j=0 ; j<N+2 ; j++ ) {
 				_densitySource[i][j] = 0;
-				//_horSpeedSource[i][j] = 0; //1.0f;
-				//_verSpeedSource[i][j] = 0; //1.0f;
 			}
 		}
-		
-		
-		/*if (Input.GetMouseButtonDown (mouseKey)) {
-			Ray ray = Camera.main.ScreenPointToRay (Input.mousePosition);
-			RaycastHit hit;
-			if (collider.Raycast(ray, out hit, float.PositiveInfinity)) {
-				_prevMouseWorldPos = hit.point;
-			}
-		}*/
+
+		/*int x, y; x = y = FluidSolver.N / 2;
+		_densitySource[x][y] += 25;
+		_densitySource[x][y+1] += 25;
+		_densitySource[x+1][y] += 25;
+		_densitySource[x+1][y+1] += 25;*/
+
 		if (Input.GetMouseButton (mouseKey)) {
 			Ray ray = Camera.main.ScreenPointToRay (Input.mousePosition);
 			RaycastHit hit;
@@ -58,13 +54,10 @@ public class FluidLayerManager : MonoBehaviour {
 				int x = Mathf.RoundToInt(hitpos.x);
 				int y = Mathf.RoundToInt(hitpos.y);
 				if (x > 10 && x < N-10 && y > 10 && y < N-10) {
-					_densitySource[x][y] += 100;
-					
-					//Vector3 move = (hit.point - _prevMouseWorldPos) * 10000;
-					//_horSpeedSource[x][y] += move.x;
-					//_verSpeedSource[x][y] += move.z;
-					
-					//_prevMouseWorldPos = hit.point;
+					_densitySource[x][y] += 25;
+					_densitySource[x][y+1] += 25;
+					_densitySource[x+1][y] += 25;
+					_densitySource[x+1][y+1] += 25;
 				}
 			}
 		}

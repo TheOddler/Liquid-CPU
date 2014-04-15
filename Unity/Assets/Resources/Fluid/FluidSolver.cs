@@ -24,14 +24,26 @@ public static class FluidSolver {
 	static public void UpdateFluid(
 		int N,
 		float[][] horSpeed, float[][] verSpeed, float[][] dens, float[][] verGrad, float[][] horGrad,
-		float[][] horSpeedSource, float[][] verSpeedSource, float[][] densSource,
+		float[][] prevHorGrad, float[][] prevVerGrad, float[][] horSpeedSource, float[][] verSpeedSource, float[][] densSource,
 		float flui, float diff,
 		float dt
 		) {
+		Gradient (N, verGrad, horGrad, prevHorGrad, prevVerGrad, dens); //
+
+		int i, j;
+		for (i=1 ; i<=N ; ++i ) { 
+			for (j=1 ; j<=N ; ++j ) {
+				horSpeed[i][j] = horGrad[i][j];
+				verSpeed[i][j] = verGrad[i][j];
+			} 
+		}
+
 		VelocityStep (N, horSpeed, verSpeed, horSpeedSource, verSpeedSource, flui, dt);
+
 		DensityStep (N, dens, densSource, horSpeed, verSpeed, diff, dt);
 		FixSpeed (N, horSpeed, verSpeed, dens);
-		Gradient (N, verGrad, horGrad, dens);
+
+		//Gradient (N, verGrad, horGrad, prevHorGrad, prevVerGrad, dens);
 	}
 	
 	static void VelocityStep (int N, float[][] u, float[][] v, float[][] u0, float[][] v0, float flui, float dt ) { 
@@ -65,25 +77,51 @@ public static class FluidSolver {
 		Advect ( N, 0, x, /*x0*/temp, u, v, dt ); 
 	}
 
-	static void Gradient ( int N, float[][] verGrad, float[][] horGrad, float[][] dens) {
+	static void Gradient ( int N, float[][] verGrad, float[][] horGrad, float[][] prevVerGrad, float[][] prevHorGrad, float[][] dens) {
 		float h = 1.0f / N / 2;
+		float pow = .1f;
 		
 		int i, j;
-		for (i=1 ; i<=N ; ++i ) { 
-			for (j=1 ; j<=N ; ++j ) { 
-				horGrad[i][j] =
-					/*h **/ 10*(
-						dens[i-1][j] -
-						dens[i+1][j] //-
-						//2*dens[i][j]
-						);
-				verGrad[i][j] =
-					/*h **/ 10*(
-						dens[i][j-1] -
-						dens[i][j+1] //-
-						//2*dens[i][j]
-					); 
-			} 
+		if (prevVerGrad != null && prevHorGrad != null)
+		{
+			for (i=1; i<=N; ++i)
+			{ 
+				for (j=1; j<=N; ++j)
+				{
+					verGrad [i] [j] =
+						prevVerGrad [i] [j] +
+							pow * (
+								dens [i] [j - 1] -
+								dens [i] [j + 1]
+							);
+
+					horGrad [i] [j] =
+						prevHorGrad [i] [j] +
+							pow * (
+								dens [i - 1] [j] -
+								dens [i + 1] [j]
+							);
+				} 
+			}
+		}
+		else {
+			for (i=1; i<=N; ++i)
+			{ 
+				for (j=1; j<=N; ++j)
+				{
+					verGrad [i] [j] =
+						pow * (
+							dens [i] [j - 1] -
+							dens [i] [j + 1]
+							);
+					
+					horGrad [i] [j] =
+						pow * (
+							dens [i - 1] [j] -
+							dens [i + 1] [j]
+							);
+				} 
+			}
 		}
 	}
 
@@ -117,10 +155,15 @@ public static class FluidSolver {
 		dt0 = dt*N;
 
 		int i, j;
+		for (i=1; i<=N; i++) { 
+			for (j=1; j<=N; j++) {
+				d[i][j] = 0;
+			}
+		}
 		for (i=1 ; i<=N ; i++ ) { 
 			for (j=1 ; j<=N ; j++ ) {
-				x = i-dt0*u[i][j];
-				y = j-dt0*v[i][j]; 
+				x = i+dt0*u[i][j];
+				y = j+dt0*v[i][j]; 
 
 				if (x<0.5f) x= 0.5f;
 				if (x>N+0.5f) x= N+0.5f;
@@ -137,7 +180,29 @@ public static class FluidSolver {
 				t1 = y-j0;
 				t0 = 1-t1;
 
-				//float dOri = d[i][j];
+				d[i0][j0] += d0[i][j]*s0*t0;
+				d[i0][j1] += d0[i][j]*s0*t1;
+				d[i1][j0] += d0[i][j]*s1*t0;
+				d[i1][j1] += d0[i][j]*s1*t1;
+
+				/*x = i-dt0*u[i][j];
+				y = j-dt0*v[i][j]; 
+				
+				if (x<0.5f) x= 0.5f;
+				if (x>N+0.5f) x= N+0.5f;
+				i0=(int)x;
+				i1=i0+1;
+				
+				if (y<0.5f) y= 0.5f;
+				if (y>N+0.5f) y= N+0.5f;
+				j0=(int)y;
+				j1=j0+1;
+				
+				s1 = x-i0;
+				s0 = 1-s1;
+				t1 = y-j0;
+				t0 = 1-t1;
+				
 				d[i][j] = 
 					s0*(
 						t0*d0[i0][j0] +
@@ -147,7 +212,7 @@ public static class FluidSolver {
 					s1*(
 						t0*d0[i1][j0] +
 						t1*d0[i1][j1]
-						);
+						);*/
 			} 
 		} 
 		SetBound ( N, b, d );
@@ -169,9 +234,10 @@ public static class FluidSolver {
 		int i, j;
 		for (i=0 ; i<N+2 ; ++i ) { 
 			for (j=0 ; j<N+2 ; ++j ) {
-				if (dens[i][j] < 0.0001) {
-					horSpeed[i][j] = 0;
-					verSpeed[i][j] = 0;
+				if (dens[i][j] < 0.001) {
+					float mult = dens[i][j] * 1000.0f;
+					horSpeed[i][j] *= mult;
+					verSpeed[i][j] *= mult;
 				}
 			}
 		}
