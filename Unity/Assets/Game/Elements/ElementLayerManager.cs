@@ -79,10 +79,11 @@ public class ElementLayerManager : MonoBehaviour {
 				int x = Mathf.RoundToInt(hitpos.x);
 				int y = Mathf.RoundToInt(hitpos.y);
 				if (x > 10 && x < N-10 && y > 10 && y < N-10) {
-					_tempSource[x][y] += _addPower * Time.fixedDeltaTime;
-					_tempSource[x][y+1] += _addPower * Time.fixedDeltaTime;
-					_tempSource[x+1][y] += _addPower * Time.fixedDeltaTime;
-					_tempSource[x+1][y+1] += _addPower * Time.fixedDeltaTime;
+					float add = _addPower * Time.fixedDeltaTime;
+					_tempSource[x][y] += add;
+					_tempSource[x][y+1] += add;
+					_tempSource[x+1][y] += add;
+					_tempSource[x+1][y+1] += add;
 				}
 			}
 		}

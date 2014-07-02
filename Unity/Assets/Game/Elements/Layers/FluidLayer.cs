@@ -93,16 +93,16 @@ public class FluidLayer : ElementLayer {
 	public override void AddSource(float[][] source) {
 		for (int i=0 ; i<N+2 ; i++ ) {
 			for (int j=0 ; j<N+2 ; j++ ) {
-				_height[i][j] += source[i][j];
+				_height[i][j] = Mathf.Max(0, _height[i][j] + source[i][j]);
 			}
 		}
 	}
 	/// <summary>
 	/// Update the fluid. Part 3.2 in the paper.
 	/// </summary>
-	/// <param name="dt">Dt.</param>
-	/// <param name="dx">Dx.</param>
-	/// <param name="lowerLayersHeight">Lower layers height.</param>
+	/// <param name="dt">delta time</param>
+	/// <param name="dx">delta x. Distance between middles of grid-cells.</param>
+	/// <param name="lowerLayersHeight">The total heights of the layers under this one. Basically this is the ground under the water.</param>
 	public override void DoUpdate(float dt, float dx, float[][] lowerLayersHeight) {
 		_fluidTimer.Start();
 		
@@ -159,7 +159,7 @@ public class FluidLayer : ElementLayer {
 		
 		
 		
-		
+		//Debug
 		_totalDens = 0;
 		for (int i=0 ; i<N+2 ; i++ ) { 
 			for (int j=0 ; j<N+2 ; j++ ) {
