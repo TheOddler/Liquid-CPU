@@ -1,8 +1,10 @@
 ﻿<Properties>
-  <MonoDevelop.Ide.Workspace />
-  <MonoDevelop.Ide.Workbench ActiveDocument="..\..\Coopcraft\Unity\Assets\Resources\Network\ConnectionManager.cs">
+  <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug" PreferredExecutionTarget="MonoDevelop.Default" />
+  <MonoDevelop.Ide.Workbench ActiveDocument="Assets\Resources\Fluid\Layers\TerrainLayer.cs">
     <Files>
-      <File FileName="..\..\Coopcraft\Unity\Assets\Resources\Network\ConnectionManager.cs" Line="6" Column="32" />
+      <File FileName="Assets\Resources\Fluid\ElementLayerManager.cs" Line="7" Column="9" />
+      <File FileName="Assets\Resources\Fluid\Layers\FluidLayer.cs" Line="17" Column="1" />
+      <File FileName="Assets\Resources\Fluid\Layers\TerrainLayer.cs" Line="16" Column="11" />
     </Files>
   </MonoDevelop.Ide.Workbench>
   <MonoDevelop.Ide.DebuggingService.Breakpoints>
