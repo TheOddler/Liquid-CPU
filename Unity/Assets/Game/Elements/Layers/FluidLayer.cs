@@ -138,7 +138,11 @@ public class FluidLayer : ElementLayer {
 					_tempFlux[x][y].bottom = K * _tempFlux[x][y].bottom;
 				}
 				//swap temp and the real one after the for-loops
-				
+			}
+		}
+		
+		for (x=1 ; x <= N ; x++ ) {
+			for (y=1 ; y <= N ; y++ ) {
 				//
 				// 3.2.2 Water Surface and Velocity Field Update
 				// ----------------------------------------------------------------------------------------
