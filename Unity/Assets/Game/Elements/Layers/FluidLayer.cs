@@ -22,6 +22,8 @@ public class FluidLayer : ElementLayer {
 	// -----------------------
 	public float _viscosity = 0.0001f;
 	public float _A = 1.0f; //the cross-sectional area of the virtual pipe
+	public float _opaqueHeight = 0.5f;
+	public float _nonZeroHeightOffset = 0.1f;
 	
 	//
 	// Bindings
@@ -59,6 +61,7 @@ public class FluidLayer : ElementLayer {
 	// --------------------
 	float _totalDens;
 	Timer _fluidTimer = new Timer();
+	Timer _visualisationTimer = new Timer();
 	
 	
 	
@@ -173,19 +176,28 @@ public class FluidLayer : ElementLayer {
 	}
 	
 	public override void ApplyVisuals(float[][] lowerLayersHeight) {
-		// Set the heights of the vertices of the mesh
+		_visualisationTimer.Start();
 		
+		// Set the heights of the vertices of the mesh and apply colors
 		var mesh = _mesh;
 		Vector3[] vertices = mesh.vertices;
+		Color32[] colors = mesh.colors32;
+		
+		Color32 transparant = new Color32(255, 255, 255, 0);
+		Color32 opaque = new Color32(255, 255, 255, 255);
 		
 		for (int i = 0; i < N+2; ++i) {
 			for (int j = 0; j < N+2; ++j) {
 				int index = CalculateIndex(i,j);
-				vertices[index].y = _height[i][j] + lowerLayersHeight[i][j];
+				vertices[index].y = _height[i][j] + lowerLayersHeight[i][j] + _nonZeroHeightOffset;
+				colors[index] = Color32.Lerp(transparant, opaque, _height[i][j] / _opaqueHeight);
 			}
 		}
 		
 		mesh.vertices = vertices;
+		mesh.colors32 = colors;
+		
+		_visualisationTimer.Stop();
 	}
 	
 	
@@ -205,7 +217,8 @@ public class FluidLayer : ElementLayer {
 
 	void OnGUI() {
 		GUI.Label(new Rect(10,10, 500, 30), "Fluid: " + _fluidTimer);
-		GUI.Label(new Rect(10,30, 500, 30), "Total Density: " + _totalDens);
+		GUI.Label(new Rect(10, 30, 500, 30), "Visuals: " + _visualisationTimer);
+		GUI.Label(new Rect(10,50, 500, 30), "Total Density: " + _totalDens);
 	}
 
 	void OnDrawGizmos () {
@@ -239,6 +252,7 @@ public class FluidLayer : ElementLayer {
 		Vector3[] vertices = new Vector3[numVertices];
 		Vector2[] uvs = new Vector2[numVertices];
 		int[] triangles = new int[numTriangles];
+		Color32[] colors = new Color32[numVertices];
 		
 		int index = 0;
 		float uvFactorX = 1.0f/(N+1);
@@ -273,6 +287,7 @@ public class FluidLayer : ElementLayer {
 		m.vertices = vertices;
 		m.uv = uvs;
 		m.triangles = triangles;
+		m.colors32 = colors;
 		m.RecalculateNormals();
 	}
 	
