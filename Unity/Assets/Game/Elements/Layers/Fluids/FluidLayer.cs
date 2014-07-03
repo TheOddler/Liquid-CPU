@@ -20,8 +20,8 @@ public class FluidLayer : ElementLayer {
 	//
 	// Settings
 	// -----------------------
-	public float _viscosity = 0.0001f;
 	public float _A = 1.0f; //the cross-sectional area of the virtual pipe
+	public float _initialHeight = 0.1f;
 	public float _opaqueHeight = 0.5f;
 	public float _nonZeroHeightOffset = 0.1f;
 	
@@ -81,8 +81,20 @@ public class FluidLayer : ElementLayer {
 			_tempHeight[i] = new float[N+2];
 			_tempFlux[i] = new OutflowFlux[N+2];
 		}
-
+		
+		//
+		// Set initial fluid height
+		// -----------------------------------------------
+		for (int i=1 ; i<=N ; i++ ) {
+			for (int j=1 ; j<=N ; j++ ) {
+				_height[i][j] = _initialHeight;
+			}
+		}
+		
+		
+		//
 		// Initialize visuals
+		// ----------------------------------------------
 		_mesh = new Mesh();
 		GetComponent<MeshFilter> ().mesh = _mesh;
 		CreatePlaneMesh (10);
@@ -93,8 +105,8 @@ public class FluidLayer : ElementLayer {
 	/// </summary>
 	/// <param name="source">The source array, this will be added directly, so it won't be multiplied with dt.</param>
 	public override void AddSource(float[][] source) {
-		for (int i=0 ; i<N+2 ; i++ ) {
-			for (int j=0 ; j<N+2 ; j++ ) {
+		for (int i=1 ; i<=N ; i++ ) {
+			for (int j=1 ; j<=N ; j++ ) {
 				_height[i][j] = Mathf.Max(0, _height[i][j] + source[i][j]);
 			}
 		}
