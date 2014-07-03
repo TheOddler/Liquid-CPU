@@ -8,12 +8,14 @@ public class ElementLayerManager : MonoBehaviour {
 	
 	public float _addPower = 10.0f;
 	public float _dt = 0.02f;
-	public float _dx = 0.05f;
+	private float _timeSinceLastUpdate = 0.0f;
 
 	public List<ElementLayer> _layers = new List<ElementLayer>(2);
 
 	float[][] _tempTotalHeight = new float[N+2][];
 	float[][] _tempSource = new float[N+2][];
+	
+	Timer _timer = new Timer();
 
 	// Use this for initialization
 	void Start () {
@@ -24,7 +26,7 @@ public class ElementLayerManager : MonoBehaviour {
 	}
 	
 	// Update is called once per frame
-	void FixedUpdate () {
+	void Update () {
 		//
 		// First add to/remove from each layer
 		// ----------------------------------------------------------------------
@@ -33,18 +35,22 @@ public class ElementLayerManager : MonoBehaviour {
 			_layers[i].AddSource(_tempSource);
 		}
 		
-		//
-		// Update each layer
-		// ----------------------------------------------------------------------
-		ResetTotalHeight(); //The first layer just sits on a plane
-		float dt = _dt; //Time.fixedDeltaTime;
-		float Np2 = (float)(N+2);
-		for (int i = 0; i < _layers.Count; ++i) {
-			float dx = collider.bounds.size.x / Np2;
 		
-			_layers[i].DoUpdate(dt, dx, _tempTotalHeight);
-			_layers[i].ApplyVisuals(_tempTotalHeight);
-			AddHeightToTotal(_layers[i].Height);
+		_timeSinceLastUpdate += Time.deltaTime;
+		if (_timeSinceLastUpdate >= _dt) {
+			_timeSinceLastUpdate -= _dt;
+			
+			//
+			// Update each layer
+			// ----------------------------------------------------------------------
+			ResetTotalHeight(); //The first layer just sits on a plane
+			float Np2 = (float)(N+2);
+			float dx = collider.bounds.size.x / Np2;
+			for (int i = 0; i < _layers.Count; ++i) {
+				_layers[i].DoUpdate(_dt, dx, _tempTotalHeight);
+				_layers[i].ApplyVisuals(_tempTotalHeight);
+				AddHeightToTotal(_layers[i].Height);
+			}
 		}
 	}
 	
@@ -87,5 +93,13 @@ public class ElementLayerManager : MonoBehaviour {
 				}
 			}
 		}
+	}
+	
+	
+	
+	
+	
+	void OnGUI() {
+		GUI.Label(new Rect(10, 10, 500, 30), "Frames behind: " + Mathf.FloorToInt(_timeSinceLastUpdate / _dt));
 	}
 }

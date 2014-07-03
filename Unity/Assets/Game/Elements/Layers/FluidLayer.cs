@@ -110,35 +110,44 @@ public class FluidLayer : ElementLayer {
 		_fluidTimer.Start();
 		
 		int x, y;
-		float totalHeight, dhL, dhR, dhT, dhB;
+		float height, totalHeight, dhL, dhR, dhT, dhB;
 		float dt_A_g_l = dt * _A * g / dx; //all constants for equation 2
 		float K; // scaling factor for the outﬂow ﬂux
 		float dV;
+		float totalFlux;
+		float tempFluxL, tempFluxR, tempFluxT, tempFluxB;
 		
 		for (x=1 ; x <= N ; x++ ) {
 			for (y=1 ; y <= N ; y++ ) {
 				//
 				// 3.2.1 Outﬂow Flux Computation
 				// --------------------------------------------------------------
-				totalHeight = lowerLayersHeight[x][y] + _height[x][y];
+				height = _height[x][y];
+				totalHeight = lowerLayersHeight[x][y] + height;
 				dhL = totalHeight - lowerLayersHeight[x-1][y] - _height[x-1][y]; //(3)
 				dhR = totalHeight - lowerLayersHeight[x+1][y] - _height[x+1][y];
 				dhT = totalHeight - lowerLayersHeight[x][y+1] - _height[x][y+1];
 				dhB = totalHeight - lowerLayersHeight[x][y-1] - _height[x][y-1];
 				
-				_tempFlux[x][y].left =	 Mathf.Max(0.0f, _flux[x][y].left	 + dt_A_g_l * dhL ); //(2)
-				_tempFlux[x][y].right =	 Mathf.Max(0.0f, _flux[x][y].right	 + dt_A_g_l * dhR );
-				_tempFlux[x][y].top =	 Mathf.Max(0.0f, _flux[x][y].top	 + dt_A_g_l * dhT );
-				_tempFlux[x][y].bottom = Mathf.Max(0.0f, _flux[x][y].bottom  + dt_A_g_l * dhB );
+				tempFluxL = Mathf.Max(0.0f, _flux[x][y].left	 + dt_A_g_l * dhL ); //(2)
+				tempFluxR = Mathf.Max(0.0f, _flux[x][y].right	 + dt_A_g_l * dhR );
+				tempFluxT = Mathf.Max(0.0f, _flux[x][y].top	 + dt_A_g_l * dhT );
+				tempFluxB = Mathf.Max(0.0f, _flux[x][y].bottom  + dt_A_g_l * dhB );
 				
-				float totalFlux = _tempFlux[x][y].left + _tempFlux[x][y].right + _tempFlux[x][y].top + _tempFlux[x][y].bottom;
+				totalFlux = tempFluxL + tempFluxR + tempFluxT + tempFluxB;
 				if (totalFlux > 0) {
-					K = Mathf.Min(1.0f, _height[x][y] * dx * dx / totalFlux / dt);  //(4)
+					K = Mathf.Min(1.0f, height * dx * dx / totalFlux / dt);  //(4)
 					
-					_tempFlux[x][y].left =	 K * _tempFlux[x][y].left;  //(5)
-					_tempFlux[x][y].right =	 K * _tempFlux[x][y].right;
-					_tempFlux[x][y].top =	 K * _tempFlux[x][y].top;
-					_tempFlux[x][y].bottom = K * _tempFlux[x][y].bottom;
+					_tempFlux[x][y].left =	 K * tempFluxL;  //(5)
+					_tempFlux[x][y].right =	 K * tempFluxR;
+					_tempFlux[x][y].top =	 K * tempFluxT;
+					_tempFlux[x][y].bottom = K * tempFluxB;
+				}
+				else {
+					_tempFlux[x][y].left =	 tempFluxL;  //(5)
+					_tempFlux[x][y].right =	 tempFluxR;
+					_tempFlux[x][y].top =	 tempFluxT;
+					_tempFlux[x][y].bottom = tempFluxB;
 				}
 				//swap temp and the real one after the for-loops
 			}
@@ -159,6 +168,7 @@ public class FluidLayer : ElementLayer {
 				//swap temp and the real one after the for-loops
 			}
 		}
+		
 		Helpers.Swap(ref _tempFlux, ref _flux);
 		Helpers.Swap(ref _tempHeight, ref _height);
 		
@@ -216,9 +226,9 @@ public class FluidLayer : ElementLayer {
 	
 
 	void OnGUI() {
-		GUI.Label(new Rect(10,10, 500, 30), "Fluid: " + _fluidTimer);
-		GUI.Label(new Rect(10, 30, 500, 30), "Visuals: " + _visualisationTimer);
-		GUI.Label(new Rect(10,50, 500, 30), "Total Density: " + _totalDens);
+		GUI.Label(new Rect(10,30, 500, 30), "Fluid: " + _fluidTimer);
+		GUI.Label(new Rect(10, 50, 500, 30), "Visuals: " + _visualisationTimer);
+		GUI.Label(new Rect(10,70, 500, 30), "Total Density: " + _totalDens);
 	}
 
 	void OnDrawGizmos () {
