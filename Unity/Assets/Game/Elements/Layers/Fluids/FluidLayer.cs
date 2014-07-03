@@ -59,10 +59,9 @@ public class FluidLayer : ElementLayer {
 	//
 	// Debug
 	// --------------------
-	float _totalDens;
+	float _totalVolume;
 	Timer _fluidTimer = new Timer();
 	Timer _visualisationTimer = new Timer();
-	
 	
 	
 	// Use this for initialization
@@ -107,51 +106,63 @@ public class FluidLayer : ElementLayer {
 	/// <param name="dx">delta x. Distance between middles of grid-cells.</param>
 	/// <param name="lowerLayersHeight">The total heights of the layers under this one. Basically this is the ground under the water.</param>
 	public override void DoUpdate(float dt, float dx, float[][] lowerLayersHeight) {
-		_fluidTimer.Start();
+		
+		OutflowFlux[][] flux = _flux;
+		OutflowFlux[][] tempFlux = _tempFlux;
+		float[][] height = _height;
+		float[][] tempHeight = _tempHeight;
 		
 		int x, y;
-		float height, totalHeight, dhL, dhR, dhT, dhB;
+		float localHeight = 0, totalHeight, dhL = 0, dhR = 0, dhT = 0, dhB = 0;
 		float dt_A_g_l = dt * _A * g / dx; //all constants for equation 2
 		float K; // scaling factor for the outﬂow ﬂux
 		float dV;
-		float totalFlux;
-		float tempFluxL, tempFluxR, tempFluxT, tempFluxB;
+		float totalFlux, h_dxdx_dt;
+		float tempFluxL = 0, tempFluxR = 0, tempFluxT = 0, tempFluxB = 0;
 		
+		_fluidTimer.Start();
 		for (x=1 ; x <= N ; x++ ) {
 			for (y=1 ; y <= N ; y++ ) {
 				//
 				// 3.2.1 Outﬂow Flux Computation
 				// --------------------------------------------------------------
-				height = _height[x][y];
-				totalHeight = lowerLayersHeight[x][y] + height;
-				dhL = totalHeight - lowerLayersHeight[x-1][y] - _height[x-1][y]; //(3)
-				dhR = totalHeight - lowerLayersHeight[x+1][y] - _height[x+1][y];
-				dhT = totalHeight - lowerLayersHeight[x][y+1] - _height[x][y+1];
-				dhB = totalHeight - lowerLayersHeight[x][y-1] - _height[x][y-1];
-				
-				tempFluxL = Mathf.Max(0.0f, _flux[x][y].left	 + dt_A_g_l * dhL ); //(2)
+				localHeight = height[x][y];
+				totalHeight = lowerLayersHeight[x][y] + localHeight;
+				dhL = totalHeight - lowerLayersHeight[x-1][y] - height[x-1][y]; //(3)
+				dhR = totalHeight - lowerLayersHeight[x+1][y] - height[x+1][y];
+				dhT = totalHeight - lowerLayersHeight[x][y+1] - height[x][y+1];
+				dhB = totalHeight - lowerLayersHeight[x][y-1] - height[x][y-1];
+
+				/*tempFluxL = Mathf.Max(0.0f, _flux[x][y].left	 + dt_A_g_l * dhL ); //(2)
 				tempFluxR = Mathf.Max(0.0f, _flux[x][y].right	 + dt_A_g_l * dhR );
-				tempFluxT = Mathf.Max(0.0f, _flux[x][y].top	 + dt_A_g_l * dhT );
-				tempFluxB = Mathf.Max(0.0f, _flux[x][y].bottom  + dt_A_g_l * dhB );
+				tempFluxT = Mathf.Max(0.0f, _flux[x][y].top		 + dt_A_g_l * dhT );
+				tempFluxB = Mathf.Max(0.0f, _flux[x][y].bottom	 + dt_A_g_l * dhB );*/
 				
+				tempFluxL = flux[x][y].left		 + dt_A_g_l * dhL;		tempFluxL = tempFluxL > 0 ? tempFluxL : 0; //(2)
+				tempFluxR = flux[x][y].right	 + dt_A_g_l * dhR;		tempFluxR = tempFluxR > 0 ? tempFluxR : 0;
+				tempFluxT = flux[x][y].top		 + dt_A_g_l * dhT;		tempFluxT = tempFluxT > 0 ? tempFluxT : 0;
+				tempFluxB = flux[x][y].bottom	 + dt_A_g_l * dhB;		tempFluxB = tempFluxB > 0 ? tempFluxB : 0;
+
 				totalFlux = tempFluxL + tempFluxR + tempFluxT + tempFluxB;
-				if (totalFlux > 0) {
-					K = Mathf.Min(1.0f, height * dx * dx / totalFlux / dt);  //(4)
+				h_dxdx_dt = localHeight * dx * dx / dt;
+				if (totalFlux > h_dxdx_dt) { //if (totalFlux > 0)
+					K = h_dxdx_dt / totalFlux; //; Mathf.Min(1.0f, h_dxdx_dt / totalFlux);  //(4)
 					
-					_tempFlux[x][y].left =	 K * tempFluxL;  //(5)
-					_tempFlux[x][y].right =	 K * tempFluxR;
-					_tempFlux[x][y].top =	 K * tempFluxT;
-					_tempFlux[x][y].bottom = K * tempFluxB;
+					tempFlux[x][y].left =	 K * tempFluxL;  //(5)
+					tempFlux[x][y].right =	 K * tempFluxR;
+					tempFlux[x][y].top =	 K * tempFluxT;
+					tempFlux[x][y].bottom =	 K * tempFluxB;
 				}
 				else {
-					_tempFlux[x][y].left =	 tempFluxL;  //(5)
-					_tempFlux[x][y].right =	 tempFluxR;
-					_tempFlux[x][y].top =	 tempFluxT;
-					_tempFlux[x][y].bottom = tempFluxB;
+					tempFlux[x][y].left =	 tempFluxL;  //(5)
+					tempFlux[x][y].right =	 tempFluxR;
+					tempFlux[x][y].top =	 tempFluxT;
+					tempFlux[x][y].bottom = tempFluxB;
 				}
 				//swap temp and the real one after the for-loops
 			}
 		}
+		_fluidTimer.Stop();
 		
 		for (x=1 ; x <= N ; x++ ) {
 			for (y=1 ; y <= N ; y++ ) {
@@ -160,29 +171,31 @@ public class FluidLayer : ElementLayer {
 				// ----------------------------------------------------------------------------------------
 				dV = dt * (
 						//sum in
-						_tempFlux[x-1][y].right + _tempFlux[x][y-1].top + _tempFlux[x+1][y].left + _tempFlux[x][y+1].bottom
+						tempFlux[x-1][y].right + tempFlux[x][y-1].top + tempFlux[x+1][y].left + tempFlux[x][y+1].bottom
 						//minus sum out
-						- _tempFlux[x][y].right - _tempFlux[x][y].top - _tempFlux[x][y].left - _tempFlux[x][y].bottom
+						- tempFlux[x][y].right - tempFlux[x][y].top - tempFlux[x][y].left - tempFlux[x][y].bottom
 					); //(6)
-				_tempHeight[x][y] = _height[x][y] + dV / (dx*dx); //(7)
+				tempHeight[x][y] = height[x][y] + dV / (dx*dx); //(7)
 				//swap temp and the real one after the for-loops
 			}
 		}
 		
+		
 		Helpers.Swap(ref _tempFlux, ref _flux);
 		Helpers.Swap(ref _tempHeight, ref _height);
 		
-		_fluidTimer.Stop();
+		
 		
 		
 		
 		//Debug
-		_totalDens = 0;
+		_totalVolume = 0;
 		for (int i=0 ; i<N+2 ; i++ ) { 
 			for (int j=0 ; j<N+2 ; j++ ) {
-				_totalDens += _height[i][j];
+				_totalVolume += _height[i][j];
 			}
 		}
+		_totalVolume *= dx * dx;
 	}
 	
 	public override void ApplyVisuals(float[][] lowerLayersHeight) {
@@ -199,8 +212,12 @@ public class FluidLayer : ElementLayer {
 		for (int i = 0; i < N+2; ++i) {
 			for (int j = 0; j < N+2; ++j) {
 				int index = CalculateIndex(i,j);
-				vertices[index].y = _height[i][j] + lowerLayersHeight[i][j] + _nonZeroHeightOffset;
-				colors[index] = Color32.Lerp(transparant, opaque, _height[i][j] / _opaqueHeight);
+				float height = _height[i][j];
+				float relHeight = height / _opaqueHeight;
+				
+				vertices[index].y = height + lowerLayersHeight[i][j]
+					+ (height > 0 ? _nonZeroHeightOffset : 0);
+				colors[index] = Color32.Lerp(transparant, opaque, relHeight);
 			}
 		}
 		
@@ -228,7 +245,7 @@ public class FluidLayer : ElementLayer {
 	void OnGUI() {
 		GUI.Label(new Rect(10,30, 500, 30), "Fluid: " + _fluidTimer);
 		GUI.Label(new Rect(10, 50, 500, 30), "Visuals: " + _visualisationTimer);
-		GUI.Label(new Rect(10,70, 500, 30), "Total Density: " + _totalDens);
+		GUI.Label(new Rect(10,70, 500, 30), "Total Volume: " + _totalVolume.ToString("0.00000000"));
 	}
 
 	void OnDrawGizmos () {
