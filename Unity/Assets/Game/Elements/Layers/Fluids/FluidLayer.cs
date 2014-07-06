@@ -50,7 +50,7 @@ public class FluidLayer : ElementLayer {
 	//
 	// Getters
 	// --------------------------
-	public override float[][] Height {
+	public override float[][] HeightField {
 		get {
 			return _height;
 		}

@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using System;
 using System.Collections;
 
 public static class Helpers {
@@ -8,5 +9,22 @@ public static class Helpers {
 		first = second;
 		second = temp;
 	}
+	
+	public static float[][] CopyArray(float[][] source)
+	{
+		var len = source.Length;
+		var dest = new float[len][];
+		
+		for (var x = 0; x < len; x++)
+		{
+			var inner = source[x];
+			var ilen = inner.Length;
+			var newer = new float[ilen];
+			Array.Copy(inner, newer, ilen);
+			dest[x] = newer;
+		}
+		
+		return dest;
+	}	
 	
 }

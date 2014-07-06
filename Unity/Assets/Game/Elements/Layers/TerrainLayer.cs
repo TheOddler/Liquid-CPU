@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using System.Collections;
 
 public class TerrainLayer : ElementLayer {
@@ -7,7 +7,7 @@ public class TerrainLayer : ElementLayer {
 	public float _offset = -0.001f;
 
 	private float[][] _height = new float[N+2][];
-	public override float[][] Height {
+	public override float[][] HeightField {
 		get {
 			return _height;
 		}

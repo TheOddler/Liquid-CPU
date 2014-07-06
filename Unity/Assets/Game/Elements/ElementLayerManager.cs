@@ -2,11 +2,17 @@
 using System.Collections;
 using System.Collections.Generic;
 
+public struct GridPoint {
+	public int x, y;
+}
+
 public class ElementLayerManager : MonoBehaviour {
 
-	public const int N = 128 - 2;
+	public const int N = 128 - 2; //max 254 to keep under Unity's vertex limit
 	
+	public int _addBoundry = 5;
 	public float _addPower = 0.02f;
+	
 	public float _dt = 0.02f;
 	public float _dx;
 	private float _timeSinceLastUpdate = 0.0f;
@@ -19,17 +25,18 @@ public class ElementLayerManager : MonoBehaviour {
 	float[][] _tempSource = new float[N+2][];
 	
 	Timer _timer = new Timer();
+	
+	public float[][] CurrentTotalHeight {
+		get {
+			return _tempTotalHeight;
+		}
+	}
 
 	// Use this for initialization
 	void Start () {
 		for (int i = 0; i < N+2; ++i) {
 			_tempTotalHeight[i] = new float[N+2];
 			_tempSource[i] = new float[N+2];
-		}
-		
-		if (_dx <= 0) {
-			float Np2 = (float)(N+2);
-			_dx = collider.bounds.size.x / Np2;
 		}
 	}
 	
@@ -40,7 +47,6 @@ public class ElementLayerManager : MonoBehaviour {
 		// ----------------------------------------------------------------------
 		CalculateSources(_colliderToAddOn);
 		_addToLayer.AddSource(_tempSource);
-		
 		
 		_timeSinceLastUpdate += Time.deltaTime;
 		if (_timeSinceLastUpdate >= _dt) {
@@ -53,7 +59,7 @@ public class ElementLayerManager : MonoBehaviour {
 			for (int i = 0; i < _layers.Count; ++i) {
 				_layers[i].DoUpdate(_dt, _dx, _tempTotalHeight);
 				_layers[i].ApplyVisuals(_tempTotalHeight);
-				AddHeightToTotal(_layers[i].Height);
+				AddHeightToTotal(_layers[i].HeightField);
 			}
 		}
 	}
@@ -93,10 +99,10 @@ public class ElementLayerManager : MonoBehaviour {
 			Ray ray = Camera.main.ScreenPointToRay (Input.mousePosition);
 			RaycastHit hit;
 			if (collider.Raycast(ray, out hit, float.PositiveInfinity)) {
-				Vector2 hitpos = hit.textureCoord * N;
+				Vector2 hitpos = hit.textureCoord * (N+2);
 				int x = Mathf.RoundToInt(hitpos.x);
 				int y = Mathf.RoundToInt(hitpos.y);
-				if (x > 10 && x < N-10 && y > 10 && y < N-10) {
+				if (x > _addBoundry && x < N-_addBoundry && y > _addBoundry && y < N-_addBoundry) {
 					float add = mouseModifier * _addPower * _dt / _dx / _dx / 4;
 					
 					_tempSource[x][y] += add;
@@ -108,6 +114,36 @@ public class ElementLayerManager : MonoBehaviour {
 		}
 	}
 	
+	
+	
+	
+	public GridPoint GridPointFromPosition(Vector3 worldPosition, bool ignoreBounds) {
+		Vector3 localPos = worldPosition - transform.position; //middle
+		Vector3 relPos = (localPos + _colliderToAddOn.bounds.size/2) / _colliderToAddOn.bounds.size.x; //assuming square grid
+		Vector3 hitpos = relPos * (N+2);
+		
+		GridPoint point;
+		point.x = Mathf.RoundToInt(hitpos.x);
+		point.y = Mathf.RoundToInt(hitpos.z);
+		
+		if (point.x < 0 || point.x > N+1) {
+			point.x = -1;
+		}
+		if (point.y < 0 || point.y > N+1) {
+			point.y = -1;
+		}
+		
+		if (ignoreBounds) {
+			if (point.x < 1 || point.x > N) {
+				point.x = -1;
+			}
+			if (point.y < 1 || point.y > N) {
+				point.y = -1;
+			}
+		}
+		
+		return point;
+	}
 	
 	
 	
