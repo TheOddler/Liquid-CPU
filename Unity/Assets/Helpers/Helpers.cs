@@ -9,6 +9,15 @@ public static class Helpers {
 		first = second;
 		second = temp;
 	}
+
+	public static void CopyValuesFrom<T>(this T[][] destination, T[][] source) {
+		int x, y;
+		for (x = 0; x < destination.Length; ++x) {
+			for (y = 0; y < destination[x].Length; ++y) {
+				destination[x][y] = source[x][y];
+			}
+		}
+	}
 	
 	public static float[][] CopyArray(float[][] source)
 	{
@@ -25,6 +34,6 @@ public static class Helpers {
 		}
 		
 		return dest;
-	}	
+	}
 	
 }

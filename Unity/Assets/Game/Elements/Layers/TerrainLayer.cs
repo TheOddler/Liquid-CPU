@@ -14,9 +14,16 @@ public class TerrainLayer : ElementLayer {
 	}
 	
 	Terrain _terrain;
+	
+	// Update is called once per frame
+	void Update () {
+		
+	}
 
-	// Use this for initialization
-	void Start () {
+	public override void AddSource(float[][] source) {
+	}
+	
+	public override void Initialize(float dt, float dx, float[][] lowerLayersHeight) {
 		for (int i = 0; i < N+2; ++i) {
 			_height[i] = new float[N+2];
 		}
@@ -33,18 +40,7 @@ public class TerrainLayer : ElementLayer {
 		}
 	}
 	
-	// Update is called once per frame
-	void Update () {
-		
-	}
-
-	public override void AddSource(float[][] source) {
-	}
-
 	public override void DoUpdate(float dt, float dx, float[][] lowerLayersHeight) {
-	}
-
-	public override void ApplyVisuals(float[][] lowerLayersHeight) {
 	}
 	
 }

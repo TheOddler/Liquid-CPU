@@ -38,6 +38,15 @@ public class ElementLayerManager : MonoBehaviour {
 			_tempTotalHeight[i] = new float[N+2];
 			_tempSource[i] = new float[N+2];
 		}
+		
+		//
+		// Initialize each layer
+		// ----------------------------------------------------------------------
+		ResetTotalHeight(); //The first layer just sits on a plane
+		for (int i = 0; i < _layers.Count; ++i) {
+			_layers[i].Initialize(_dt, _dx, _tempTotalHeight);
+			AddHeightToTotal(_layers[i].HeightField);
+		}
 	}
 	
 	// Update is called once per frame
@@ -58,7 +67,6 @@ public class ElementLayerManager : MonoBehaviour {
 			ResetTotalHeight(); //The first layer just sits on a plane
 			for (int i = 0; i < _layers.Count; ++i) {
 				_layers[i].DoUpdate(_dt, _dx, _tempTotalHeight);
-				_layers[i].ApplyVisuals(_tempTotalHeight);
 				AddHeightToTotal(_layers[i].HeightField);
 			}
 		}
