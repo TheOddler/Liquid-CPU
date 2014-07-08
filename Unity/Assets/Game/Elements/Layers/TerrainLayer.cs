@@ -33,7 +33,7 @@ public class TerrainLayer : ElementLayer {
 		float Np2 = (float)(N+2);
 		for (int i = 0 ; i < N+2 ; i++ ) {
 			for (int j = 0 ; j < N+2 ; j++ ) {
-				Vector3 worldPos = transform.position + new Vector3( i/Np2*10.0f, 0, j/Np2*10.0f); //TODO Get rid of the magic number 10. This is currently the size of a layer
+				Vector3 worldPos = transform.position + new Vector3( (i+0.5f)/Np2*10.0f, 0, (j+0.5f)/Np2*10.0f); //TODO Get rid of the magic number 10. This is currently the size of a layer
 				
 				_height[i][j] = _terrain.SampleHeight(worldPos) + _offset;
 			}

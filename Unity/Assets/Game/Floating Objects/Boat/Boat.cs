@@ -1,7 +1,7 @@
 ﻿using UnityEngine;
 using System.Collections;
 
-public class Boat : MonoBehaviour {
+public class Boat : FloatingObject {
 	
 	public ElementLayerManager _elementManager;
 	public FluidLayer _fluidLayer;
@@ -19,7 +19,7 @@ public class Boat : MonoBehaviour {
 		_collider = GetComponent<Collider>();
 	}
 	
-	public void Initialize(ElementLayerManager manager, FluidLayer fluid) {
+	public override void Initialize(ElementLayerManager manager, FluidLayer fluid) {
 		_elementManager = manager;
 		_fluidLayer = fluid;
 	}

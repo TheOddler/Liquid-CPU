@@ -3,19 +3,41 @@ using System.Collections;
 using System.Collections.Generic;
 
 public struct GridPoint {
+	
+	public GridPoint(int x, int y) {
+		this.x = x;
+		this.y = y;
+	}
+
 	public int x, y;
+}
+
+[System.Serializable]
+public class AddOptions {
+	public int boundry = 5;
+	public float power = 0.02f;
+}
+
+[System.Serializable]
+public class RainOptions {
+	public bool enabled = true;
+	public float volume = 0.001f;
+	[Range(0.001f, 0.1f)]
+	public float time = 0.05f;
 }
 
 public class ElementLayerManager : MonoBehaviour {
 
 	public const int N = 128 - 2; //max 254 to keep under Unity's vertex limit
 	
-	public int _addBoundry = 5;
-	public float _addPower = 0.02f;
+	public AddOptions _addOptions = new AddOptions();
+	
+	public RainOptions _rainOptions = new RainOptions();
+	float _timeSinceLastDrop;
 	
 	public float _dt = 0.02f;
 	public float _dx;
-	private float _timeSinceLastUpdate = 0.0f;
+	float _timeSinceLastUpdate = 0.0f;
 
 	public List<ElementLayer> _layers = new List<ElementLayer>(2);
 	public ElementLayer _addToLayer;
@@ -54,9 +76,24 @@ public class ElementLayerManager : MonoBehaviour {
 		//
 		// First add to/remove from the layer
 		// ----------------------------------------------------------------------
-		CalculateSources(_colliderToAddOn);
+		//User added water
+		CalculateSources(_colliderToAddOn, _addOptions);
+		//Rain
+		while (_timeSinceLastDrop >= _rainOptions.time) {
+			if (_rainOptions.enabled) {
+				int x = Random.Range(1, N);
+				int y = Random.Range(1, N);
+				_tempSource[x][y] = _rainOptions.volume / _dx / _dx;
+			}
+			_timeSinceLastDrop -= _rainOptions.time;
+		}
+		_timeSinceLastDrop += Time.deltaTime;
+		//Add it
 		_addToLayer.AddSource(_tempSource);
 		
+		//
+		// Update the layers
+		// -------------------------------------------		
 		_timeSinceLastUpdate += Time.deltaTime;
 		if (_timeSinceLastUpdate >= _dt) {
 			_timeSinceLastUpdate -= _dt;
@@ -88,7 +125,7 @@ public class ElementLayerManager : MonoBehaviour {
 		}
 	}
 
-	void CalculateSources(Collider collider) {
+	void CalculateSources(Collider collider, AddOptions options) {
 		for (int i=0 ; i<N+2 ; i++ ) { 
 			for (int j=0 ; j<N+2 ; j++ ) {
 				_tempSource[i][j] = 0;
@@ -108,10 +145,10 @@ public class ElementLayerManager : MonoBehaviour {
 			RaycastHit hit;
 			if (collider.Raycast(ray, out hit, float.PositiveInfinity)) {
 				Vector2 hitpos = hit.textureCoord * (N+2);
-				int x = Mathf.RoundToInt(hitpos.x);
-				int y = Mathf.RoundToInt(hitpos.y);
-				if (x > _addBoundry && x < N-_addBoundry && y > _addBoundry && y < N-_addBoundry) {
-					float add = mouseModifier * _addPower * _dt / _dx / _dx / 4;
+				int x = Mathf.RoundToInt(hitpos.x) - 1;
+				int y = Mathf.RoundToInt(hitpos.y) - 1;
+				if (x > options.boundry && x < N-options.boundry && y > options.boundry && y < N-options.boundry) {
+					float add = mouseModifier * options.power * _dt / _dx / _dx / 4;
 					
 					_tempSource[x][y] += add;
 					_tempSource[x][y+1] += add;

@@ -22,9 +22,9 @@ public class FluidLayer : ElementLayer {
 	// Settings
 	// -----------------------
 	public float _A = 1.0f; //the cross-sectional area of the virtual pipe
+	public float _damping = 1.0f;
 	public float _initialHeight = 0.1f;
 	public float _opaqueHeight = 0.5f;
-	public float _nonZeroHeightOffset = 0.1f;
 	
 	//
 	// Visuals
@@ -81,6 +81,13 @@ public class FluidLayer : ElementLayer {
 	Timer _waitTimer = new Timer();
 	Timer _applyUpdateTimer = new Timer();
 	Timer _updateTimer = new Timer();
+	
+	bool _showDetails = false;
+	Timer _heightTimer = new Timer();
+	Timer _fluxTimer = new Timer();
+	Timer _sourceTimer = new Timer();
+	Timer _velocityTimer = new Timer();
+	Timer _visualsTimer = new Timer();
 	
 	void Awake() {
 		//
@@ -193,12 +200,25 @@ public class FluidLayer : ElementLayer {
 		_updateThread = new Thread(()=>{
 			_updateTimer.Start();
 			
+			_sourceTimer.Start();
 			DoAddSourceToHeight(_tempSource, _height);
-			UpdateFlux(dt, dx, _tempLowerLayersHeight, _A, _flux, _tempFlux, _height);
-			UpdateHeight(dt, dx, _tempLowerLayersHeight, _tempFlux, _height, _tempHeight);
-			UpdateVelocity(dx, _tempFlux, _height, _tempHeight, _tempVelocity);
+			_sourceTimer.Stop();
 			
-			UpdateVisuals(_tempLowerLayersHeight, _opaqueHeight, _nonZeroHeightOffset, _height, _vertices, _colors);
+			_fluxTimer.Start();
+			UpdateFlux(dt, dx, _tempLowerLayersHeight, _A, _damping, _flux, _tempFlux, _height);
+			_fluxTimer.Stop();
+			
+			_heightTimer.Start();
+			UpdateHeight(dt, dx, _tempLowerLayersHeight, _tempFlux, _height, _tempHeight);
+			_heightTimer.Stop();
+			
+			_velocityTimer.Start();
+			UpdateVelocity(dx, _tempFlux, _height, _tempHeight, _tempVelocity);
+			_velocityTimer.Stop();
+
+			_visualsTimer.Start();
+			UpdateVisuals(_tempLowerLayersHeight, _opaqueHeight, _height, _vertices, _colors);
+			_visualsTimer.Stop();
 			
 			_updateTimer.Stop();
 		});
@@ -219,7 +239,7 @@ public class FluidLayer : ElementLayer {
 	}
 	
 	static void UpdateFlux(float dt, float dx, float[][] lowerLayersHeight,
-		float A,
+		float A, float damping,
 		OutflowFlux[][] flux, OutflowFlux[][] tempFlux,
 		float[][] height
 		) {
@@ -227,9 +247,9 @@ public class FluidLayer : ElementLayer {
 		float localHeight, totalHeight, dhL, dhR, dhT, dhB;
 		float dt_A_g_l = dt * A * g / dx; //all constants for equation 2
 		float K; // scaling factor for the outﬂow ﬂux
-		float totalFlux, h_dxdx_dt;
+		float totalFlux, h_dx_dx_dt;
 		float tempFluxL, tempFluxR, tempFluxT, tempFluxB;
-		
+		float fluxDamp = 1.0f - dt * damping;
 		
 		for (x=1 ; x <= N ; x++ ) {
 			for (y=1 ; y <= N ; y++ ) {
@@ -243,26 +263,26 @@ public class FluidLayer : ElementLayer {
 				dhT = totalHeight - lowerLayersHeight[x][y+1] - height[x][y+1];
 				dhB = totalHeight - lowerLayersHeight[x][y-1] - height[x][y-1];
 				
-				/*tempFluxL = Mathf.Max(0.0f, _flux[x][y].left	 + dt_A_g_l * dhL ); //(2)
-				tempFluxR = Mathf.Max(0.0f, _flux[x][y].right	 + dt_A_g_l * dhR );
-				tempFluxT = Mathf.Max(0.0f, _flux[x][y].top		 + dt_A_g_l * dhT );
-				tempFluxB = Mathf.Max(0.0f, _flux[x][y].bottom	 + dt_A_g_l * dhB );*/
+				/*tempFluxL = Mathf.Max(0.0f, flux[x][y].left		+ dt_A_g_l * dhL ); //(2)
+				tempFluxR = Mathf.Max(0.0f, flux[x][y].right	+ dt_A_g_l * dhR );
+				tempFluxT = Mathf.Max(0.0f, flux[x][y].top		+ dt_A_g_l * dhT );
+				tempFluxB = Mathf.Max(0.0f, flux[x][y].bottom	+ dt_A_g_l * dhB );*/
 				
-				tempFluxL = flux[x][y].left		 + dt_A_g_l * dhL;		tempFluxL = tempFluxL > 0 ? tempFluxL : 0; //(2)
-				tempFluxR = flux[x][y].right	 + dt_A_g_l * dhR;		tempFluxR = tempFluxR > 0 ? tempFluxR : 0;
-				tempFluxT = flux[x][y].top		 + dt_A_g_l * dhT;		tempFluxT = tempFluxT > 0 ? tempFluxT : 0;
-				tempFluxB = flux[x][y].bottom	 + dt_A_g_l * dhB;		tempFluxB = tempFluxB > 0 ? tempFluxB : 0;
+				tempFluxL = flux[x][y].left		* fluxDamp + dt_A_g_l * dhL;		tempFluxL = tempFluxL > 0 ? tempFluxL : 0; //(2)
+				tempFluxR = flux[x][y].right	* fluxDamp + dt_A_g_l * dhR;		tempFluxR = tempFluxR > 0 ? tempFluxR : 0;
+				tempFluxT = flux[x][y].top		* fluxDamp + dt_A_g_l * dhT;		tempFluxT = tempFluxT > 0 ? tempFluxT : 0;
+				tempFluxB = flux[x][y].bottom	* fluxDamp + dt_A_g_l * dhB;		tempFluxB = tempFluxB > 0 ? tempFluxB : 0;
 				
 				totalFlux = tempFluxL + tempFluxR + tempFluxT + tempFluxB;
-				h_dxdx_dt = localHeight * dx * dx / dt;
-				if (totalFlux <= 0.0f || totalFlux <= h_dxdx_dt) {
+				h_dx_dx_dt = localHeight * dx * dx / dt;
+				if (totalFlux <= 0.0f || totalFlux <= h_dx_dx_dt) {
 					tempFlux[x][y].left =	 tempFluxL;  //(5)
 					tempFlux[x][y].right =	 tempFluxR;
 					tempFlux[x][y].top =	 tempFluxT;
 					tempFlux[x][y].bottom =	 tempFluxB;
 				}
 				else {							//if (totalFlux > 0)
-					K = h_dxdx_dt / totalFlux;	//; Mathf.Min(1.0f, h_dxdx_dt / totalFlux);  //(4)
+					K = h_dx_dx_dt / totalFlux;	//; Mathf.Min(1.0f, h_dxdx_dt / totalFlux);  //(4)
 					
 					tempFlux[x][y].left =	 K * tempFluxL;  //(5)
 					tempFlux[x][y].right =	 K * tempFluxR;
@@ -278,25 +298,26 @@ public class FluidLayer : ElementLayer {
 		OutflowFlux[][] tempFlux,
 		float[][] height, float[][] tempHeight
 		) {
-		
 		int x, y;
+		float dx_dx_Inv = 1.0f / (dx * dx);
 		float dV;
+		OutflowFlux locFlux; 
 		for (x=1 ; x <= N ; x++ ) {
 			for (y=1 ; y <= N ; y++ ) {
 				//
 				// 3.2.2 Water Surface (and Velocity Field Update)
 				// ----------------------------------------------------------------------------------------
+				locFlux = tempFlux[x][y];
 				dV = dt * (
 					//sum in
 					tempFlux[x-1][y].right + tempFlux[x][y-1].top + tempFlux[x+1][y].left + tempFlux[x][y+1].bottom
 					//minus sum out
-					- tempFlux[x][y].right - tempFlux[x][y].top - tempFlux[x][y].left - tempFlux[x][y].bottom
+					- locFlux.right - locFlux.top - locFlux.left - locFlux.bottom
 					); //(6)
-				tempHeight[x][y] = height[x][y] + dV / (dx*dx); //(7)
+				tempHeight[x][y] = height[x][y] + dV * dx_dx_Inv; //(7)
 				//swap temp and the real one after the for-loops
 			}
 		}
-		
 	}
 
 	static void UpdateVelocity(float dx,
@@ -308,18 +329,25 @@ public class FluidLayer : ElementLayer {
 		int x, y;
 		float dWx, dWy;
 		float dAv; //dAvarage
+		float dxInv = 1/dx;
 		
 		for (x=1 ; x <= N ; x++ ) {
 			for (y=1 ; y <= N ; y++ ) {
 				//
 				// 3.2.2 (Water Surface and) Velocity Field Update
 				// ----------------------------------------------------------------------------------------
-				dWx = (tempFlux[x-1][y].right - tempFlux[x][y].left + tempFlux[x][y].right - tempFlux[x+1][y].left) / 2.0f; //8
-				dWy = (tempFlux[x][y-1].top - tempFlux[x][y].bottom + tempFlux[x][x].top - tempFlux[x][y+1].bottom) / 2.0f;
-				dAv = (height[x][y] + tempHeight[x][y]) / 2.0f;
-				
-				tempVelocity[x][y].u = dWx / dx / dAv; //9
-				tempVelocity[x][y].v = dWy / dx / dAv; //dx used for ly here since we assume a square grid
+				dAv = (height[x][y] + tempHeight[x][y]) * 0.5f;
+				if (dAv == 0) {
+					tempVelocity[x][y].u = 0.0f;
+					tempVelocity[x][y].v = 0.0f;
+				}
+				else {
+					dWx = (tempFlux[x-1][y].right - tempFlux[x][y].left + tempFlux[x][y].right - tempFlux[x+1][y].left) * 0.5f; //8
+					dWy = (tempFlux[x][y-1].top - tempFlux[x][y].bottom + tempFlux[x][x].top - tempFlux[x][y+1].bottom) * 0.5f;
+					
+					tempVelocity[x][y].u = dWx * dxInv / dAv; //9
+					tempVelocity[x][y].v = dWy * dxInv / dAv; //dx used for ly here since we assume a square grid
+				}
 				//swap temp and the real one later
 			}
 		}
@@ -327,18 +355,16 @@ public class FluidLayer : ElementLayer {
 	
 	
 		
-	static void UpdateVisuals(float[][] lowerLayersHeight, float opaqueHeight, float nonZeroHeightOffset, float[][] height, Vector3[] vertices, Color32[] colors) {
+	static void UpdateVisuals(float[][] lowerLayersHeight, float opaqueHeight, float[][] height, Vector3[] vertices, Color32[] colors) {
 		int i, j, index;
-		float locHeight, relHeight;
+		float locHeight;
 		for (i = 0; i < N+2; ++i) {
 			for (j = 0; j < N+2; ++j) {
 				index = CalculateIndex(i,j);
 				locHeight = height[i][j];
-				relHeight = locHeight / opaqueHeight;
 				
-				vertices[index].y = locHeight + lowerLayersHeight[i][j]
-					+ (locHeight > 0 ? nonZeroHeightOffset : 0);
-				colors[index].a = (byte)Mathf.Lerp(0, 255, relHeight);
+				vertices[index].y = locHeight + lowerLayersHeight[i][j];
+				colors[index].a = opaqueHeight > locHeight ? (byte)(255.0f * locHeight / opaqueHeight) : byte.MaxValue;
 			}
 		}
 	}
@@ -346,14 +372,23 @@ public class FluidLayer : ElementLayer {
 	
 
 	void OnGUI() {
-		GUI.Label(new Rect(10,30, 800, 30), "Update: " + _updateTimer);
-		GUI.Label(new Rect(10,50, 800, 30), "Simulation main thread: " + _applyUpdateTimer);
-		GUI.Label(new Rect(10,70, 800, 30), "Wait time: " + _waitTimer);
+		GUI.Label(new Rect(10,30, 800, 30), "Update:\t\t\t\t\t\t\t" + _updateTimer);
+		GUI.Label(new Rect(10,50, 800, 30), "Wait time:\t\t\t\t\t\t" + _waitTimer);
+		GUI.Label(new Rect(10,70, 800, 30), "Simulation main thread:\t" + _applyUpdateTimer);
 		GUI.Label(new Rect(10,90, 300, 30), "Total Volume: " + _totalVolume.ToString("0.000000000"));
+		
+		_showDetails = GUI.Toggle(new Rect(10,110, 100, 30), _showDetails, "Show Details");
+		if (_showDetails) {
+			GUI.Label(new Rect(10,130, 800, 30), "Source:\t\t" + _sourceTimer);
+			GUI.Label(new Rect(10,150, 800, 30), "Flux:\t\t\t" + _fluxTimer);
+			GUI.Label(new Rect(10,170, 800, 30), "Height:\t\t" + _heightTimer);
+			GUI.Label(new Rect(10,190, 800, 30), "Velocity:\t" + _velocityTimer);
+			GUI.Label(new Rect(10,210, 800, 30), "Visuals:\t\t" + _visualsTimer);
+		}
 	}
 
 	void OnDrawGizmos () {
-		/*if (_vertices != null && _velocity[0] != null) {
+		if (_vertices != null && _velocity[0] != null) {
 			float size = 10;
 			float scaleX = size/(N+1);
 			float scaleY = size/(N+1);
@@ -364,11 +399,12 @@ public class FluidLayer : ElementLayer {
 					int index = CalculateIndex(x, y);
 					var worldPos = _vertices[index];
 					var vel = _velocity[x][y];
-					var velVector = new Vector3(vel.u, 0, vel.v) / 100.0f;
-					Gizmos.DrawLine(worldPos, worldPos + velVector);
+					var velVector = new Vector3(vel.u, 0, vel.v) * _height[x][y];
+					Gizmos.color = new Color(0.5f + 4.0f * velVector.x,  0.5f + 4.0f * velVector.z, 0.5f);
+					Gizmos.DrawRay(worldPos, velVector);
 				}
 			}
-		}*/
+		}
     }
     
     
