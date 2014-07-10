@@ -5,3 +5,5 @@ Unity/Unity-csharp.sln
 Unity/Unity.sln
 Unity/Temp/
 Unity/Unity.userprefs
+*.blend1
+*.blend1.meta
