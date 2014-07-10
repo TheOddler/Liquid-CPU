@@ -13,22 +13,36 @@ public class TerrainLayer : ElementLayer {
 		}
 	}
 	
+	//
+	// Visuals
+	// -----------------------
 	Terrain _terrain;
+	Mesh _mesh;
+	Vector3[] _vertices;
+
+	void Awake () {
+		for (int i = 0; i < N+2; ++i) {
+			_height[i] = new float[N+2];
+		}
+	}
 	
 	// Update is called once per frame
 	void Update () {
 		
 	}
-
-	public override void AddSource(float[][] source) {
-	}
 	
 	public override void Initialize(float dt, float dx, float[][] lowerLayersHeight) {
-		for (int i = 0; i < N+2; ++i) {
-			_height[i] = new float[N+2];
-		}
+		//
+		// Initialize visuals
+		// ----------------------------------------------
+		_mesh = new Mesh();
+		GetComponent<MeshFilter> ().mesh = _mesh;
+		Helpers.CreatePlaneMesh(_mesh, N, 10, new Vector3(5, 0, 5), new Color32(255, 255, 255, 255));
+		_vertices = _mesh.vertices;
 		
-		//sample terrain
+		//
+		// Sample terrain
+		// --------------------------------------
 		_terrain = GetComponent<Terrain>();
 		float Np2 = (float)(N+2);
 		for (int i = 0 ; i < N+2 ; i++ ) {
@@ -38,9 +52,41 @@ public class TerrainLayer : ElementLayer {
 				_height[i][j] = _terrain.SampleHeight(worldPos) + _offset;
 			}
 		}
+		
+		//
+		// Hide terrain and apply to vertices
+		// ----------------------------------------------------------------------------
+		UpdateVisuals(lowerLayersHeight, _height, _vertices);
+		_mesh.vertices = _vertices;
+		_mesh.RecalculateNormals();
+		GetComponent<Terrain>().enabled = false;
+	}
+
+	public override void AddSource(float[][] source) {
+		for (int i=1 ; i<=N ; i++ ) {
+			for (int j=1 ; j<=N ; j++ ) {
+				_height[i][j] = Mathf.Max(0, _height[i][j] + source[i][j]);
+			}
+		}
 	}
 	
 	public override void DoUpdate(float dt, float dx, float[][] lowerLayersHeight) {
+		UpdateVisuals(lowerLayersHeight, _height, _vertices);
+		_mesh.vertices = _vertices;
+		_mesh.RecalculateNormals();
 	}
 	
+	static void UpdateVisuals(float[][] lowerLayersHeight, float[][] height, Vector3[] vertices) {
+		int i, j, index;
+		for (i = 0; i < N+2; ++i) {
+			for (j = 0; j < N+2; ++j) {
+				index = CalculateIndex(i,j);
+				vertices[index].y = height[i][j] + lowerLayersHeight[i][j];
+			}
+		}
+	}
+	
+	public static int CalculateIndex(int i, int j) {
+		return ((i) + (N + 2) * (j));
+	}
 }

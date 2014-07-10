@@ -110,15 +110,6 @@ public class FluidLayer : ElementLayer {
 
 			_tempVelocity[i] = new Velocity[N+2];
 		}
-		
-		//
-		// Initialize visuals
-		// ----------------------------------------------
-		_mesh = new Mesh();
-		GetComponent<MeshFilter> ().mesh = _mesh;
-		CreatePlaneMesh (10);
-		_vertices = _mesh.vertices;
-		_colors = _mesh.colors32;
 	}
 	
 	/// <summary>
@@ -134,6 +125,15 @@ public class FluidLayer : ElementLayer {
 	}
 	
 	public override void Initialize(float dt, float dx, float[][] lowerLayersHeight) {
+		//
+		// Initialize visuals
+		// ----------------------------------------------
+		_mesh = new Mesh();
+		GetComponent<MeshFilter> ().mesh = _mesh;
+		Helpers.CreatePlaneMesh(_mesh, N, 10, Vector3.zero, new Color(255, 255, 255, 0));
+		_vertices = _mesh.vertices;
+		_colors = _mesh.colors32;
+		
 		//
 		// Set initial fluid height
 		// -----------------------------------------------
@@ -389,10 +389,6 @@ public class FluidLayer : ElementLayer {
 
 	void OnDrawGizmos () {
 		if (_vertices != null && _velocity[0] != null) {
-			float size = 10;
-			float scaleX = size/(N+1);
-			float scaleY = size/(N+1);
-	
 			int x, y;
 			for (x=1 ; x <= N ; x++ ) {
 				for (y=1 ; y <= N ; y++ ) {
@@ -405,84 +401,9 @@ public class FluidLayer : ElementLayer {
 				}
 			}
 		}
-    }
-    
-    
-    
-    
-    
-    
-    
-    
-    
-	void CreatePlaneMesh(float size) {
-		var m = _mesh;
-		m.name = "Plane";
-		
-		int hCount2 = N+2;
-		int vCount2 = N+2;
-		int numTriangles = (N+1) * (N+1) * 6;
-		int numVertices = hCount2 * vCount2;
-		
-		Vector3[] vertices = new Vector3[numVertices];
-		Vector2[] uvs = new Vector2[numVertices];
-		int[] triangles = new int[numTriangles];
-		Color32[] colors = new Color32[numVertices];
-		
-		int index = 0;
-		float uvFactorX = 1.0f/(N+1);
-		float uvFactorY = 1.0f/(N+1);
-		float scaleX = size/(N+1);
-		float scaleY = size/(N+1);
-		for (float y = 0.0f; y < vCount2; y++)
-		{
-			for (float x = 0.0f; x < hCount2; x++)
-			{
-				vertices[index] = new Vector3(x*scaleX - size/2, 0.0f, y*scaleY - size/2);
-				uvs[index] = new Vector2(x*uvFactorX, y*uvFactorY);
-				colors[index] = new Color32(255, 255, 255, 255);
-
-				++index;
-			}
-		}
-		
-		index = 0;
-		for (int y = 0; y < (N+1); y++)
-		{
-			for (int x = 0; x < (N+1); x++)
-			{
-				triangles[index]   = (y     * hCount2) + x;
-				triangles[index+1] = ((y+1) * hCount2) + x;
-				triangles[index+2] = (y     * hCount2) + x + 1;
-				
-				triangles[index+3] = ((y+1) * hCount2) + x;
-				triangles[index+4] = ((y+1) * hCount2) + x + 1;
-				triangles[index+5] = (y     * hCount2) + x + 1;
-				index += 6;
-			}
-		}
-		
-		m.vertices = vertices;
-		m.uv = uvs;
-		m.triangles = triangles;
-		m.colors32 = colors;
-		m.RecalculateNormals();
 	}
 	
-	void GenerateTexture() {
-		var texture = renderer.material.mainTexture as Texture2D;
-		
-		// set the pixel values
-		for (int i = 0; i < N+2; ++i) {
-			for (int j = 0; j < N+2; ++j) {
-				float b = _height[i][j];
-				texture.SetPixel(i, j, new Color(0, 0, b));
-			}
-		}
-		
-		// Apply all SetPixel calls
-		texture.Apply();
-	}
+	
     
 	public static int CalculateIndex(int i, int j) {
 		return ((i) + (N + 2) * (j));

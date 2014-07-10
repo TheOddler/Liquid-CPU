@@ -34,6 +34,7 @@ public class ElementLayerManager : MonoBehaviour {
 	
 	public RainOptions _rainOptions = new RainOptions();
 	float _timeSinceLastDrop;
+	public ParticleSystem _rainVisuals;
 	
 	public float _dt = 0.02f;
 	public float _dx;
@@ -74,6 +75,11 @@ public class ElementLayerManager : MonoBehaviour {
 	// Update is called once per frame
 	void Update () {
 		//
+		// Update rain visuals
+		// -----------------------------------------------------
+		_rainVisuals.enableEmission = _rainOptions.enabled;
+		
+		//
 		// First add to/remove from the layer
 		// ----------------------------------------------------------------------
 		//User added water
@@ -98,6 +104,7 @@ public class ElementLayerManager : MonoBehaviour {
 		if (_timeSinceLastUpdate >= _dt) {
 			_timeSinceLastUpdate -= _dt;
 			
+			_timer.Start();
 			//
 			// Update each layer
 			// ----------------------------------------------------------------------
@@ -106,6 +113,8 @@ public class ElementLayerManager : MonoBehaviour {
 				_layers[i].DoUpdate(_dt, _dx, _tempTotalHeight);
 				AddHeightToTotal(_layers[i].HeightField);
 			}
+			
+			_timer.Stop();
 		}
 	}
 	
