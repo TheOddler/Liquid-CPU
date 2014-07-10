@@ -195,5 +195,6 @@ public class ElementLayerManager : MonoBehaviour {
 	
 	void OnGUI() {
 		GUI.Label(new Rect(10, 10, 500, 30), "Frames behind: " + Mathf.FloorToInt(_timeSinceLastUpdate / _dt));
+		_rainOptions.enabled = GUI.Toggle(new Rect(Screen.width-100, 10, 100, 30), _rainOptions.enabled, " Enable rain");
 	}
 }

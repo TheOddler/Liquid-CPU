@@ -372,9 +372,9 @@ public class FluidLayer : ElementLayer {
 	
 
 	void OnGUI() {
-		GUI.Label(new Rect(10,30, 800, 30), "Update:\t\t\t\t\t\t\t" + _updateTimer);
-		GUI.Label(new Rect(10,50, 800, 30), "Wait time:\t\t\t\t\t\t" + _waitTimer);
-		GUI.Label(new Rect(10,70, 800, 30), "Simulation main thread:\t" + _applyUpdateTimer);
+		GUI.Label(new Rect(10,30, 800, 30), "Update:\t\t\t" + _updateTimer);
+		GUI.Label(new Rect(10,50, 800, 30), "Wait time:\t\t" + _waitTimer);
+		GUI.Label(new Rect(10,70, 800, 30), "Main thread:\t" + _applyUpdateTimer);
 		GUI.Label(new Rect(10,90, 300, 30), "Total Volume: " + _totalVolume.ToString("0.000000000"));
 		
 		_showDetails = GUI.Toggle(new Rect(10,110, 100, 30), _showDetails, "Show Details");
