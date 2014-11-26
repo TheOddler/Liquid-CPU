@@ -7,3 +7,5 @@ Unity/Temp/
 Unity/Unity.userprefs
 *.blend1
 *.blend1.meta
+Unity/Assembly-CSharp-Editor-vs.csproj
+Unity/Assembly-CSharp-Editor.csproj
