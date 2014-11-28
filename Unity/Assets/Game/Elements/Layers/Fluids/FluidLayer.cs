@@ -4,10 +4,18 @@ using System.Threading;
 
 public struct OutflowFlux {
 	public float top, bottom, left, right;
+	
+	public override string ToString() {
+		return "t " + top + "; b " + bottom + "; l " + left + "; r " + right;
+	}
 }
 
 public struct Velocity {
 	public float u, v;
+	
+	public override string ToString() {
+		return u.ToString("00.000") + "," + v.ToString("00.000");
+	}
 }
 
 /// <summary>
@@ -25,6 +33,7 @@ public class FluidLayer : ElementLayer {
 	public float _damping = 1.0f;
 	public float _initialHeight = 0.1f;
 	public float _opaqueHeight = 0.5f;
+	public ElementLayer _toErode;
 
 	//
 	// Visuals
@@ -43,7 +52,10 @@ public class FluidLayer : ElementLayer {
 	// Derived
 	Velocity[][] _velocity = new Velocity[N+2][];
 	// Extra
+	Color32[][] _pigment = new Color32[N+2][];
+	
 	float[][] _sediment = new float[N+2][];
+	float[][] _erosionDeposition = new float[N+2][];
 
 	//
 	// Temporary values
@@ -52,8 +64,13 @@ public class FluidLayer : ElementLayer {
 	float[][] _tempHeight = new float[N+2][];
 	OutflowFlux[][] _tempFlux = new OutflowFlux[N+2][];
 	float[][] _tempSource = new float[N+2][];
-
+	
 	Velocity[][] _tempVelocity = new Velocity[N+2][];
+	
+	Color32[][] _tempPigment = new Color32[N+2][];
+	
+	float[][] _tempSediment = new float[N+2][];
+	float[][] _tempErosionDeposition = new float[N+2][];
 
 	//
 	// Threading
@@ -88,6 +105,9 @@ public class FluidLayer : ElementLayer {
 	Timer _sourceTimer = new Timer();
 	Timer _velocityTimer = new Timer();
 	Timer _visualsTimer = new Timer();
+	Timer _erosionDepositionTimer = new Timer();
+	Timer _sedimentTransportTimer = new Timer();
+	
 
 	void Awake() {
 		//
@@ -100,7 +120,10 @@ public class FluidLayer : ElementLayer {
 
 			_velocity[i] = new Velocity[N+2];
 
+			_pigment[i] = new Color32[N+2];
+			
 			_sediment[i] = new float[N+2];
+			_erosionDeposition[i] = new float[N+2];
 
 			// temporary
 			_tempLowerLayersHeight[i] = new float[N+2];
@@ -109,6 +132,11 @@ public class FluidLayer : ElementLayer {
 			_tempFlux[i] = new OutflowFlux[N+2];
 
 			_tempVelocity[i] = new Velocity[N+2];
+			
+			_tempPigment[i] = new Color32[N+2];
+			
+			_tempSediment[i] = new float[N+2];
+			_tempErosionDeposition[i] = new float[N+2];
 		}
 	}
 
@@ -142,6 +170,20 @@ public class FluidLayer : ElementLayer {
 				_height[i][j] = _tempHeight[i][j] = _initialHeight;
 			}
 		}
+		
+		//
+		// Set initial pigment
+		// -----------------------------------------------
+		for (int i=1 ; i<=N ; i++ ) {
+			for (int j=1 ; j<=N ; j++ ) {
+				_pigment[i][j] = _tempPigment[i][j] = 
+					new Color(
+						(float)i/(float)N,
+						(float)j/(float)N,
+						0
+					);
+			}
+		}
 
 		//
 		// Already start the first update so one is ready when asked for in the DoUpdate
@@ -170,10 +212,14 @@ public class FluidLayer : ElementLayer {
 		Helpers.Swap(ref _tempHeight, ref _height);
 		Helpers.Swap(ref _tempSource, ref _source);
 		Helpers.Swap(ref _tempVelocity, ref _velocity);
+		Helpers.Swap(ref _tempPigment, ref _pigment);
+		Helpers.Swap(ref _tempSediment, ref _sediment);
+		Helpers.Swap(ref _tempErosionDeposition, ref _erosionDeposition);
 		_mesh.vertices = _vertices;
 		_mesh.colors32 = _colors;
 		//Start a new update for the next time DoUpdate is called.
 		DoUpdateThreaded(dt, dx, lowerLayersHeight);
+		_toErode.AddSource(_erosionDeposition);
 
 		_applyUpdateTimer.Stop();
 
@@ -215,9 +261,19 @@ public class FluidLayer : ElementLayer {
 			_velocityTimer.Start();
 			UpdateVelocity(dx, _tempFlux, _height, _tempHeight, _tempVelocity);
 			_velocityTimer.Stop();
+			
+			//UpdatePigment(dt, _pigment, _tempPigment, _velocity);
+			
+			_erosionDepositionTimer.Start();
+			UpdateErosionDeposition(dt, dx, 1.5f, 0.15f, 0.05f, _velocity, _height, _tempLowerLayersHeight, _sediment, _tempErosionDeposition);
+			_erosionDepositionTimer.Stop();
+			
+			_sedimentTransportTimer.Start();
+			UpdateSedimentTransportation(dt, _sediment, _tempSediment, _velocity);
+			_sedimentTransportTimer.Stop();
 
 			_visualsTimer.Start();
-			UpdateVisuals(_tempLowerLayersHeight, _opaqueHeight, _height, _vertices, _colors);
+			UpdateVisuals(_tempLowerLayersHeight, _opaqueHeight, _height, _pigment, _sediment, _vertices, _colors);
 			_visualsTimer.Stop();
 
 			_updateTimer.Stop();
@@ -319,7 +375,76 @@ public class FluidLayer : ElementLayer {
 			}
 		}
 	}
-
+	
+	static void UpdateErosionDeposition(float dt, float dx, float Kc, float Ks, float Kd,
+		Velocity[][] curVelocity,
+		float[][] fluidHeight,
+		float[][] lowerLayersHeight,
+		float[][] curSediment,
+		float[][] toErodeDeposit
+	) {
+		int x, y;
+		Velocity v;
+		float C;
+		float st;
+		float Kc_dxdx = Kc * dx * dx;
+		float temp;
+		for (x=1 ; x <= N ; x++ ) {
+			for (y=1 ; y <= N ; y++ ) {
+				//
+				// 3.3 Erosion and Deposition
+				// --------------------------------------------------------------
+				v = curVelocity[x][y];
+				C = Kc_dxdx * 5f * Mathf.Sqrt(v.u*v.u + v.v*v.v) * fluidHeight[x][y];
+				st = curSediment[x][y];
+				if (C > st) {
+					temp = Mathf.Min(C - st, Ks * (C - st));
+					toErodeDeposit[x][y] = -temp;
+					curSediment[x][y] = st + temp;
+				}
+				else {
+					temp = Mathf.Max(st, Kd * (st - C));
+					toErodeDeposit[x][y] = temp;
+					curSediment[x][y] = st - temp;
+				}
+			}
+		}
+	}
+	
+	static void UpdateSedimentTransportation(float dt,
+		float[][] curSediment, float[][] nextSediment, 
+		Velocity[][] velocity
+	) {
+		int i, j;
+		int i0, i1, j0, j1;
+		float s1, t1, s0, t0;
+		float dt0 = dt*N;
+		float x, y;
+		//float nextSed;
+		for (i=1 ; i <= N ; ++i ) {
+			for (j=1 ; j <= N ; ++j ) {
+				x = i - dt0*velocity[i][j].u;
+				y = j - dt0*velocity[i][j].v;
+				if (x < 0.5f)		x = 0.9f;
+				if (x > N + 0.5f)	x = N+0.1f;
+				i0 = (int)x;
+				i1 = i0+1;
+				
+				if (y < 0.5f)		y = 0.9f;
+				if (y > N + 0.5f)	y = N+0.1f;
+				j0 = (int)y;
+				j1 = j0+1;
+				s1 = x - i0;
+				s0 = 1 - s1;
+				t1 = y - j0;
+				t0 = 1 - t1;
+				nextSediment[i][j] =
+					s0 * (t0 * curSediment[i0][j0] + t1 * curSediment[i0][j1]) +
+					s1 * (t0 * curSediment[i1][j0] + t1 * curSediment[i1][j1]) ;
+			}
+		}
+	}
+	
 	static void UpdateVelocity(float dx,
 		OutflowFlux[][] tempFlux,
 		float[][] height,
@@ -330,32 +455,62 @@ public class FluidLayer : ElementLayer {
 		float dWx, dWy;
 		float dAv; //dAvarage
 		float dxInv = 1/dx;
-
+			
 		for (x=1 ; x <= N ; x++ ) {
 			for (y=1 ; y <= N ; y++ ) {
 				//
 				// 3.2.2 (Water Surface and) Velocity Field Update
 				// ----------------------------------------------------------------------------------------
-				dAv = (height[x][y] + tempHeight[x][y]) * 0.5f;
-				if (dAv == 0) {
-					tempVelocity[x][y].u = 0.0f;
-					tempVelocity[x][y].v = 0.0f;
-				}
-				else {
-					dWx = (tempFlux[x-1][y].right - tempFlux[x][y].left + tempFlux[x][y].right - tempFlux[x+1][y].left) * 0.5f; //8
-					dWy = (tempFlux[x][y-1].top - tempFlux[x][y].bottom + tempFlux[x][x].top - tempFlux[x][y+1].bottom) * 0.5f;
-
-					tempVelocity[x][y].u = dWx * dxInv / dAv; //9
-					tempVelocity[x][y].v = dWy * dxInv / dAv; //dx used for ly here since we assume a square grid
-				}
+				dAv = Mathf.Max(0.000001f, (height[x][y] + tempHeight[x][y]) * 0.5f);
+				
+				dWx = (tempFlux[x-1][y].right	- tempFlux[x][y].left	+ tempFlux[x][y].right	- tempFlux[x+1][y].left)	* 0.5f; //8
+				dWy = (tempFlux[x][y-1].top 	- tempFlux[x][y].bottom + tempFlux[x][y].top	- tempFlux[x][y+1].bottom)	* 0.5f;
+				
+				tempVelocity[x][y].u = dWx * dxInv / dAv; //9
+				tempVelocity[x][y].v = dWy * dxInv / dAv; //dx used for ly here since we assume a square grid
 				//swap temp and the real one later
+			}
+		}
+	}
+	
+	static void UpdatePigment(float dt,
+		Color32[][] pigment, Color32[][] tempPigment, 
+		Velocity[][] velocity
+	) {
+		int i, j;
+		int i0, i1, j0, j1;
+		float s1, t1; //s0, t0
+		float dt0 = dt*N;
+		float x, y;
+		for (i=1 ; i <= N ; ++i ) {
+			for (j=1 ; j <= N ; ++j ) {
+				x = i - dt0*velocity[i][j].u;
+				y = j - dt0*velocity[i][j].v;
+				if (x < 0.5f)		x = 0.5f;
+				if (x > N + 0.5f)	x = N+0.5f;
+				i0 = (int)x;
+				i1 = i0+1;
+				
+				if (y < 0.5f)		y = 0.5f;
+				if (y > N + 0.5f)	y = N+0.5f;
+				j0 = (int)y;
+				j1 = j0+1;
+				s1 = x - i0;
+				//s0 = 1 - s1;
+				t1 = y - j0;
+				//t0 = 1 - t1;
+				tempPigment[i][j] = 
+					Color32.Lerp(
+					Color32.Lerp(pigment[i0][j0], pigment[i0][j1], t1),
+					Color32.Lerp(pigment[i1][j0], pigment[i1][j1], t1),
+					s1
+					);
 			}
 		}
 	}
 
 
-
-	static void UpdateVisuals(float[][] lowerLayersHeight, float opaqueHeight, float[][] height, Vector3[] vertices, Color32[] colors) {
+	static void UpdateVisuals(float[][] lowerLayersHeight, float opaqueHeight, float[][] height, Color32[][] pigment, float[][] sediment, Vector3[] vertices, Color32[] colors) {
 		int i, j, index;
 		float locHeight;
 		for (i = 0; i < N+2; ++i) {
@@ -364,6 +519,11 @@ public class FluidLayer : ElementLayer {
 				locHeight = height[i][j];
 
 				vertices[index].y = locHeight + lowerLayersHeight[i][j];
+				colors[index] = new Color32(
+					255,
+					(byte)(Mathf.Max(0, 255.0f - sediment[i][j] * 255.0f * 1000.0f)),
+					(byte)(Mathf.Max(0, 255.0f - sediment[i][j] * 255.0f * 1000.0f)),
+					255); //pigment[i][j];
 				colors[index].a = opaqueHeight > locHeight ? (byte)(255.0f * locHeight / opaqueHeight) : byte.MaxValue;
 			}
 		}
@@ -383,7 +543,9 @@ public class FluidLayer : ElementLayer {
 			GUI.Label(new Rect(10,150, 800, 30), "Flux:\t" + _fluxTimer);
 			GUI.Label(new Rect(10,170, 800, 30), "Height:\t" + _heightTimer);
 			GUI.Label(new Rect(10,190, 800, 30), "Velocity:\t" + _velocityTimer);
-			GUI.Label(new Rect(10,210, 800, 30), "Visuals:\t" + _visualsTimer);
+			GUI.Label(new Rect(10,210, 800, 30), "Erosion:\t" + _erosionDepositionTimer);
+			GUI.Label(new Rect(10,230, 800, 30), "Sediment:\t" + _sedimentTransportTimer);
+			GUI.Label(new Rect(10,250, 800, 30), "Visuals:\t" + _visualsTimer);
 		}
 	}
 
@@ -394,10 +556,22 @@ public class FluidLayer : ElementLayer {
 				for (y=1 ; y <= N ; y++ ) {
 					int index = CalculateIndex(x, y);
 					var worldPos = _vertices[index];
+					
 					var vel = _velocity[x][y];
-					var velVector = new Vector3(vel.u, 0, vel.v) * _height[x][y];
-					Gizmos.color = new Color(0.5f + 4.0f * velVector.x,  0.5f + 4.0f * velVector.z, 0.5f);
-					Gizmos.DrawRay(worldPos, velVector);
+					var velVec = new Vector3(vel.u, 0, vel.v); // * _height[x][y];
+					var velVecNor = velVec.normalized;
+					Gizmos.color = new Color(.5f + .5f * velVecNor.x,  .5f + .5f * velVecNor.z, 0.5f);
+					Gizmos.DrawRay(worldPos, velVec);
+					
+					/*OutflowFlux flux = _flux[x][y];
+					Gizmos.color = Color.red;
+					Gizmos.DrawRay(worldPos, new Vector3(flux.right * 500.0f, 0, 0));
+					Gizmos.color = Color.green;
+					Gizmos.DrawRay(worldPos, new Vector3(-flux.left * 500.0f, 0, 0));
+					Gizmos.color = Color.blue;
+					Gizmos.DrawRay(worldPos, new Vector3(0, 0, flux.top * 500.0f));
+					Gizmos.color = Color.white;
+					Gizmos.DrawRay(worldPos, new Vector3(0, 0, -flux.bottom * 500.0f));*/
 				}
 			}
 		}

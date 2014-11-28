@@ -1,4 +1,4 @@
-﻿Shader "Unlit Transparent Vertex Colored" 
+Shader "Unlit Transparent Vertex Colored" 
 {
 	Properties 
 	{
