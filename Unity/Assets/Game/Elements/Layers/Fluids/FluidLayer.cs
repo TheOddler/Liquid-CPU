@@ -265,7 +265,7 @@ public class FluidLayer : ElementLayer {
 			//UpdatePigment(dt, _pigment, _tempPigment, _velocity);
 			
 			_erosionDepositionTimer.Start();
-			UpdateErosionDeposition(dt, dx, 1.5f, 0.15f, 0.05f, _velocity, _height, _tempLowerLayersHeight, _sediment, _tempErosionDeposition);
+			UpdateErosionDeposition(dt, dx, 1.5f, 0.5f, 0.3f, _velocity, _height, _tempLowerLayersHeight, _sediment, _tempErosionDeposition);
 			_erosionDepositionTimer.Stop();
 			
 			_sedimentTransportTimer.Start();
@@ -388,6 +388,8 @@ public class FluidLayer : ElementLayer {
 		float C;
 		float st;
 		float Kc_dxdx = Kc * dx * dx;
+		float sinAlpha, dhx, dhy;
+		float dx2inv = 1.0f / (2.0f * dx);
 		float temp;
 		for (x=1 ; x <= N ; x++ ) {
 			for (y=1 ; y <= N ; y++ ) {
@@ -395,7 +397,11 @@ public class FluidLayer : ElementLayer {
 				// 3.3 Erosion and Deposition
 				// --------------------------------------------------------------
 				v = curVelocity[x][y];
-				C = Kc_dxdx * 5f * Mathf.Sqrt(v.u*v.u + v.v*v.v) * fluidHeight[x][y];
+				// calculations for tilt with help from: http://math.stackexchange.com/questions/1044044/local-tilt-angle-based-on-height-field#1044080
+				dhx = (fluidHeight[x+1][y] - fluidHeight[x-1][y]) * dx2inv;
+				dhy = (fluidHeight[x][y+1] - fluidHeight[x][y-1]) * dx2inv;
+				sinAlpha = Mathf.Sqrt(1 - 1 / (1 + dhx*dhx + dhy*dhy));
+				C = Kc_dxdx * sinAlpha * Mathf.Sqrt(v.u*v.u + v.v*v.v) * fluidHeight[x][y];
 				st = curSediment[x][y];
 				if (C > st) {
 					temp = Mathf.Min(C - st, Ks * (C - st));
