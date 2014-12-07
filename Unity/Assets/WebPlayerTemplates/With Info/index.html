@@ -1,0 +1,142 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+	<title>Unity Web Player | %UNITY_WEB_NAME%</title>
+	%UNITY_UNITYOBJECT_DEPENDENCIES%
+	<script type="text/javascript">
+	<!--
+	var unityObjectUrl = "%UNITY_UNITYOBJECT_URL%";
+	if (document.location.protocol == 'https:')
+		unityObjectUrl = unityObjectUrl.replace("http://", "https://ssl-");
+		document.write('<script type="text\/javascript" src="' + unityObjectUrl + '"><\/script>');
+		-->
+		</script>
+		<script type="text/javascript">
+		<!--
+		jQuery(function() {
+			var config = {
+				width: %UNITY_WIDTH%,
+				height: %UNITY_HEIGHT%,
+				params: %UNITY_PLAYER_PARAMS%
+			};
+			config.params["disableContextMenu"] = true;
+
+			var u = new UnityObject2(config);
+
+			var $missingScreen = jQuery("#unityPlayer").find(".missing");
+			var $brokenScreen = jQuery("#unityPlayer").find(".broken");
+			$missingScreen.hide();
+			$brokenScreen.hide();
+
+			u.observeProgress(function (progress) {
+				switch(progress.pluginStatus) {
+					case "broken":
+						$brokenScreen.find("a").click(function (e) {
+							e.stopPropagation();
+							e.preventDefault();
+							u.installPlugin();
+							return false;
+						});
+						$brokenScreen.show();
+						break;
+						case "missing":
+							$missingScreen.find("a").click(function (e) {
+								e.stopPropagation();
+								e.preventDefault();
+								u.installPlugin();
+								return false;
+							});
+							$missingScreen.show();
+							break;
+							case "installed":
+							$missingScreen.remove();
+							break;
+							case "first":
+							break;
+						}
+					});
+					u.initPlugin(jQuery("#unityPlayer")[0], "%UNITY_WEB_PATH%");
+				});
+			-->
+		</script>
+		<style type="text/css">
+			<!--
+				body {
+					font-family: Helvetica, Verdana, Arial, sans-serif;
+					background-color: white;
+					color: black;
+					text-align: center;
+				}
+				a:link, a:visited {
+					color: #000;
+				}
+				a:active, a:hover {
+					color: #666;
+				}
+				p.header {
+					font-size: small;
+				}
+				p.header span {
+					font-weight: bold;
+				}
+				p.footer {
+					font-size: x-small;
+				}
+				div.content {
+					margin: auto;
+					width: %UNITY_WIDTH%px;
+				}
+				div.broken,
+				div.missing {
+					margin: auto;
+					position: relative;
+					top: 50%;
+					width: 193px;
+				}
+				div.broken a,
+				div.missing a {
+					height: 63px;
+					position: relative;
+					top: -31px;
+				}
+				div.broken img,
+				div.missing img {
+					border-width: 0px;
+				}
+				div.broken {
+					display: none;
+				}
+				div#unityPlayer {
+					cursor: default;
+					height: %UNITY_HEIGHT%px;
+					width: %UNITY_WIDTH%px;
+				}
+			-->
+		</style>
+	</head>
+	<body>
+		<p>Liquid by <a href="http://theoddler.github.io/">Pablo Bollansée</a></p>
+
+		<p>Click and drag to add water. Toggle rain at the top right. Left and right arrow to move camera.</p>
+		<p>For debug reasons the water is currently drawn with a white texture. The more red the water looks the more sediment it's transporting.</p>
+
+		<div class="content">
+			<div id="unityPlayer">
+				<div class="missing">
+					<a href="http://unity3d.com/webplayer/" title="Unity Web Player. Install now!">
+						<img alt="Unity Web Player. Install now!" src="http://webplayer.unity3d.com/installation/getunity.png" width="193" height="63" />
+					</a>
+				</div>
+				<div class="broken">
+					<a href="http://unity3d.com/webplayer/" title="Unity Web Player. Install now! Restart your browser after install.">
+						<img alt="Unity Web Player. Install now! Restart your browser after install." src="http://webplayer.unity3d.com/installation/getunityrestart.png" width="193" height="63" />
+					</a>
+				</div>
+			</div>
+		</div>
+
+		<p>The algorithm currently runs on the CPU, however it does run on its own thread so it can run at a proper 60fps. The erosion is still a work in progress and might start looking a bit weird when running for a long time. Some evaporation of the water is also simulated so the level won't overflow and show the erosion better.</p>
+
+	</body>
+</html>

@@ -271,6 +271,8 @@ public class FluidLayer : ElementLayer {
 			_sedimentTransportTimer.Start();
 			UpdateSedimentTransportation(dt, _sediment, _tempSediment, _velocity);
 			_sedimentTransportTimer.Stop();
+				
+			UpdateEvaporation(dt, 0.1f, _tempHeight);
 
 			_visualsTimer.Start();
 			UpdateVisuals(_tempLowerLayersHeight, _opaqueHeight, _height, _pigment, _sediment, _vertices, _colors);
@@ -401,7 +403,7 @@ public class FluidLayer : ElementLayer {
 				dhx = (fluidHeight[x+1][y] - fluidHeight[x-1][y]) * dx2inv;
 				dhy = (fluidHeight[x][y+1] - fluidHeight[x][y-1]) * dx2inv;
 				sinAlpha = Mathf.Sqrt(1 - 1 / (1 + dhx*dhx + dhy*dhy));
-				C = Kc_dxdx * sinAlpha * Mathf.Sqrt(v.u*v.u + v.v*v.v) * fluidHeight[x][y];
+				C = Kc_dxdx * sinAlpha * Mathf.Sqrt(v.u*v.u + v.v*v.v);// * fluidHeight[x][y];
 				st = curSediment[x][y];
 				if (C > st) {
 					temp = Mathf.Min(C - st, Ks * (C - st));
@@ -511,6 +513,16 @@ public class FluidLayer : ElementLayer {
 					Color32.Lerp(pigment[i1][j0], pigment[i1][j1], t1),
 					s1
 					);
+			}
+		}
+	}
+	
+	static void UpdateEvaporation(float dt, float Ke, float[][] waterHeight) {
+		int i, j;
+		float one_Ke_dt = 1 - Ke * dt;
+		for (i = 0; i < N+2; ++i) {
+			for (j = 0; j < N+2; ++j) {
+				waterHeight[i][j] *= one_Ke_dt;
 			}
 		}
 	}
