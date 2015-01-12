@@ -49,12 +49,11 @@ public class TerrainLayer : ElementLayer {
 			for (int j = 0 ; j < N+2 ; j++ ) {
 				Vector3 worldPos = transform.position + new Vector3( (i+0.5f)/Np2*10.0f, 0, (j+0.5f)/Np2*10.0f); //TODO Get rid of the magic number 10. This is currently the size of a layer
 				
-				_height[i][j] = _terrain.SampleHeight(worldPos) + _offset;
-				/*(float)Mathf.Max(
+				_height[i][j] = //_terrain.SampleHeight(worldPos) + _offset;
+					(float)Mathf.Max(
 					Mathf.Abs(i - N/2),
 					Mathf.Abs(j - N/2))
 					/ 20.0f;//_terrain.SampleHeight(worldPos) + _offset;
-					*/
 			}
 		}
 		

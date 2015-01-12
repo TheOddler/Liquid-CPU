@@ -11,3 +11,5 @@ Unity/Assembly-CSharp-Editor-vs.csproj
 Unity/Assembly-CSharp-Editor.csproj
 Unity/Assembly-CSharp-Editor-firstpass-vs.csproj
 Unity/Assembly-CSharp-Editor-firstpass.csproj
+ScriptInspector3.meta
+Unity/Assets/Plugins/Editor/ScriptInspector3

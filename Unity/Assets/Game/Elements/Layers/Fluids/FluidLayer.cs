@@ -265,7 +265,7 @@ public class FluidLayer : ElementLayer {
 			//UpdatePigment(dt, _pigment, _tempPigment, _velocity);
 			
 			_erosionDepositionTimer.Start();
-			UpdateErosionDeposition(dt, dx, 1.5f, 0.5f, 0.3f, _velocity, _height, _tempLowerLayersHeight, _sediment, _tempErosionDeposition);
+			UpdateErosionDeposition(dt, dx, 1.0f, 0.2f, 0.1f, _velocity, _height, _tempLowerLayersHeight, _sediment, _tempErosionDeposition);
 			_erosionDepositionTimer.Stop();
 			
 			_sedimentTransportTimer.Start();
@@ -579,17 +579,29 @@ public class FluidLayer : ElementLayer {
 					var velVec = new Vector3(vel.u, 0, vel.v); // * _height[x][y];
 					var velVecNor = velVec.normalized;
 					Gizmos.color = new Color(.5f + .5f * velVecNor.x,  .5f + .5f * velVecNor.z, 0.5f);
-					Gizmos.DrawRay(worldPos, velVec);
+					Gizmos.DrawRay(worldPos, velVec * .5f);
+					
+					
+					/*OutflowFlux flux = _flux[x][y];
+					
+					Gizmos.color = new Color(1,0,0,flux.right * 100.0f);
+					Gizmos.DrawRay(worldPos, new Vector3(flux.right * 200.0f, 0, 0));
+					
+					Gizmos.color = new Color(0,1,0,flux.left * 100.0f);
+					Gizmos.DrawRay(worldPos, new Vector3(-flux.left * 200.0f, 0, 0));
+					
+					Gizmos.color = new Color(0,0,1,flux.top * 100.0f);
+					Gizmos.DrawRay(worldPos, new Vector3(0, 0, flux.top * 200.0f));
+					
+					Gizmos.color = new Color(1,1,1,flux.bottom * 100.0f);
+					Gizmos.DrawRay(worldPos, new Vector3(0, 0, -flux.bottom * 200.0f));
+					*/
 					
 					/*OutflowFlux flux = _flux[x][y];
 					Gizmos.color = Color.red;
-					Gizmos.DrawRay(worldPos, new Vector3(flux.right * 500.0f, 0, 0));
-					Gizmos.color = Color.green;
-					Gizmos.DrawRay(worldPos, new Vector3(-flux.left * 500.0f, 0, 0));
-					Gizmos.color = Color.blue;
-					Gizmos.DrawRay(worldPos, new Vector3(0, 0, flux.top * 500.0f));
-					Gizmos.color = Color.white;
-					Gizmos.DrawRay(worldPos, new Vector3(0, 0, -flux.bottom * 500.0f));*/
+					float tot = flux.right + flux.left + flux.top + flux.bottom;
+					Gizmos.DrawRay(worldPos, new Vector3(0, tot * 500.0f, 0));
+					*/
 				}
 			}
 		}
