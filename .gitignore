@@ -1,17 +1,14 @@
-Unity/Library/
-Unity/Assembly-CSharp-vs.csproj
-Unity/Assembly-CSharp.csproj
-Unity/Unity-csharp.sln
-Unity/Unity.sln
-Unity/Temp/
-Unity/Unity.userprefs
-*.blend1
-*.blend1.meta
-Unity/Assembly-CSharp-Editor-vs.csproj
-Unity/Assembly-CSharp-Editor.csproj
-Unity/Assembly-CSharp-Editor-firstpass-vs.csproj
-Unity/Assembly-CSharp-Editor-firstpass.csproj
-ScriptInspector3.meta
-Unity/Assets/Plugins/Editor/ScriptInspector3
-Unity/Assembly-CSharp-firstpass-vs.csproj
-Unity/Assembly-CSharp-firstpass.csproj
+#
+# Project Files
+# ---
+[Bb]uilds/*
+
+#
+# OS generated
+# ---
+.DS_Store*
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+[Tt]humbs.db

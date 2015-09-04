@@ -1,0 +1,27 @@
+#
+# Unity generated
+# ---
+[Tt]emp/
+[Oo]bj/
+[Bb]uild
+[Ll]ibrary/
+sysinfo.txt
+
+#
+# VS/MD generated
+# ---
+[Ee]xported[Oo]bj/
+/*.userprefs
+/*.csproj
+/*.pidb
+/*.suo
+/*.sln*
+/*.user
+/*.unityproj
+/*.booproj
+
+#
+# 3rd Party Editor plugins
+# ---
+Assets/[Pp]lugins/[Ee]ditor/[Ss]cript[Ii]nspector3.meta
+Assets/[Pp]lugins/[Ee]ditor/[Ss]cript[Ii]nspector3/*
